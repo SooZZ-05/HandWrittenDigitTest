@@ -174,9 +174,7 @@ elif mode == "✍️ Draw on Whiteboard":
             st.error("No drawing data found. Please draw your equation and try again.")
         else:
             # Debug prints to check the data.
-            st.write("Canvas image data shape:", canvas_result.image_data.shape)
-            st.write("Canvas image data dtype:", canvas_result.image_data.dtype)
-            st.write("Canvas image data max value:", canvas_result.image_data.max())
+            st.image(canvas_result, caption="drawing result", use_container_width=True)
             
             # If the image data is in 0-1 range, convert it; otherwise, use as is.
             if canvas_result.image_data.max() <= 1:
