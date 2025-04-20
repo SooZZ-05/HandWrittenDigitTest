@@ -1,7 +1,6 @@
 import streamlit as st
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import re
 from streamlit_drawable_canvas import st_canvas
 from tensorflow.keras.models import model_from_json
@@ -157,7 +156,7 @@ if mode == "📤 Upload Image":
 elif mode == "✍️ Draw on Whiteboard":
     st.subheader("Draw your equation below:")
 
-    # Draw canvas with update_streamlit turned off to prevent re-run while drawing.
+    # Draw canvas without auto-updates to avoid mid-drawing re-runs.
     canvas_result = st_canvas(
         fill_color="#FFFFFF",
         stroke_width=6,
@@ -167,41 +166,45 @@ elif mode == "✍️ Draw on Whiteboard":
         width=600,
         drawing_mode="freedraw",
         key="canvas",
-        update_streamlit=False,  # Important: disable auto-update
+        update_streamlit=False,  # Disable continuous updates.
     )
     
-    # Add a button to process the drawing when ready.
     if st.button("Recognize Equation"):
         if canvas_result.image_data is None:
-            st.error("No drawing data found. Please draw your equation in the canvas and try again.")
+            st.error("No drawing data found. Please draw your equation and try again.")
         else:
-            # Debug: print shape info of raw canvas data
+            # Debug prints to check the data.
             st.write("Canvas image data shape:", canvas_result.image_data.shape)
+            st.write("Canvas image data dtype:", canvas_result.image_data.dtype)
+            st.write("Canvas image data max value:", canvas_result.image_data.max())
             
-            # Convert RGBA float (0–1) to uint8 (0–255)
-            rgba_image = (canvas_result.image_data * 255).astype(np.uint8)
+            # If the image data is in 0-1 range, convert it; otherwise, use as is.
+            if canvas_result.image_data.max() <= 1:
+                rgba_image = (canvas_result.image_data * 255).astype(np.uint8)
+            else:
+                rgba_image = canvas_result.image_data.copy()
+
             st.image(rgba_image, caption="🎨 Original RGBA from Canvas", use_container_width=True)
             
-            # Separate the alpha channel and blend onto a white background
-            alpha = rgba_image[:, :, 3] / 255.0
-            white_bg = np.ones_like(rgba_image[:, :, :3], dtype=np.uint8) * 255
-            blended_image = (alpha[..., None] * rgba_image[:, :, :3] + (1 - alpha[..., None]) * white_bg).astype(np.uint8)
+            # Blend alpha onto white background (if the image has an alpha channel).
+            if rgba_image.shape[2] == 4:
+                alpha = rgba_image[:, :, 3] / 255.0
+                white_bg = np.ones_like(rgba_image[:, :, :3], dtype=np.uint8) * 255
+                blended_image = (alpha[..., None] * rgba_image[:, :, :3] + (1 - alpha[..., None]) * white_bg).astype(np.uint8)
+            else:
+                blended_image = rgba_image.copy()
             st.image(blended_image, caption="🧾 Blended Image (RGB)", use_container_width=True)
 
-            # Convert to grayscale
+            # Convert to grayscale.
             gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
             st.image(gray_img, caption="🧊 Grayscale Image", use_container_width=True)
 
-            # Binarize to enhance strokes
+            # Binarize and invert to make strokes clearer.
             _, gray_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
-            gray_img = cv2.bitwise_not(gray_img)  # Invert if needed
-            
-            # Optionally thicken strokes
-            kernel = np.ones((3, 3), np.uint8)
-            gray_img = cv2.dilate(gray_img, kernel, iterations=1)
+            gray_img = cv2.bitwise_not(gray_img)
             st.image(gray_img, caption="Processed Drawing for Detection", use_container_width=True)
             
-            # Use the shared prediction function
+            # Use the shared prediction function.
             expression, result_img = predict_expression_from_image(gray_img)
             st.image(result_img, caption="Detected Boxes", use_container_width=True)
 
