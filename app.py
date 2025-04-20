@@ -8,7 +8,7 @@ import re
 
 # Load models once
 models = load_models()
-st.set_option('deprecation.showPyplotGlobalUse', False)
+# st.set_option('deprecation.showPyplotGlobalUse', False)
 
 st.title("🧮 Handwritten Math Expression Recognizer")
 
