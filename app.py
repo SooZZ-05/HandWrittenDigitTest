@@ -21,7 +21,7 @@ if uploaded_file:
     img = cv2.imdecode(file_bytes, cv2.IMREAD_GRAYSCALE)
 
     img = cv2.bitwise_not(img)
-    st.image(img, caption="Inverted Image", use_column_width=True)
+    st.image(img, caption="Inverted Image", use_container_width=True)
 
     _, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
 
@@ -34,7 +34,7 @@ if uploaded_file:
     img_copy = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     for x, y, w, h in sorted_boxes:
         cv2.rectangle(img_copy, (x, y), (x+w, y+h), (0, 255, 0), 2)
-    st.image(img_copy, caption="Detected Boxes", use_column_width=True)
+    st.image(img_copy, caption="Detected Boxes", use_container_width=True)
 
     # Load models (call only once)
     models, class_labels = load_models()
@@ -80,8 +80,11 @@ if uploaded_file:
     expression = re.sub(r'^[*/+\-]+', '', expression)
     expression = re.sub(r'[*/+\-]+$', '', expression)
 
-    st.markdown(f"### ✍️ Recognized Expression: `{expression}`")
-
+    st.markdown(
+        f"<h2 style='font-size: 28px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
+        unsafe_allow_html=True,
+    )
+    
     try:
         result = eval(expression)
         st.success(f"✅ Result: `{expression} = {result}`")
