@@ -107,8 +107,8 @@ def load_models():
     class_labels = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '-', '*', '/']
 
     for i in range(10):
-        json_path = f'CNNModel_{i}.json'
-        weights_path = f'CNNModel_{i}.weights.h5'
+        json_path = f'models/CNNModel_{i}.json'
+        weights_path = f'models/CNNModel_{i}.weights.h5'
 
         with open(json_path, 'r') as json_file:
             model = model_from_json(json_file.read())
@@ -119,8 +119,8 @@ def load_models():
     return models, class_labels
 
 def load_mini_model():
-    with open("MiniCNN_127.json", "r") as json_file:
+    with open("models/MiniCNN_127.json", "r") as json_file:
         mini_model = model_from_json(json_file.read())
-    mini_model.load_weights("MiniCNN_127.weights.h5")
+    mini_model.load_weights("models/MiniCNN_127.weights.h5")
     mini_class_labels = ['1', '2', '7']
     return mini_model, mini_class_labels
