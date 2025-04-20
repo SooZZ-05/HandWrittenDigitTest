@@ -27,50 +27,103 @@ def load_mini_model():
 mini_model = load_mini_model()
 
 # ---- Merge Nearby Contours ----
-def merge_contours(bounding_boxes, max_gap=10):
-    if not bounding_boxes:
-        return []
+def merge_contours(boxes, x_thresh=15, y_thresh=40):
+    merged = []
+    used = [False] * len(boxes)
 
-    # Sort left to right
-    bounding_boxes.sort(key=lambda box: box[0])
-    merged = [bounding_boxes[0]]
+    for i in range(len(boxes)):
+        if used[i]:
+            continue
 
-    for box in bounding_boxes[1:]:
-        x, y, w, h = box
-        last = merged[-1]
-        lx, ly, lw, lh = last
+        x1, y1, w1, h1 = boxes[i]
+        group = [(x1, y1, w1, h1)]
+        used[i] = True
 
-        # Merge if close
-        if x <= lx + lw + max_gap:
-            nx = min(x, lx)
-            ny = min(y, ly)
-            nw = max(x + w, lx + lw) - nx
-            nh = max(y + h, ly + lh) - ny
-            merged[-1] = (nx, ny, nw, nh)
-        else:
-            merged.append(box)
+        for j in range(i + 1, len(boxes)):
+            if used[j]:
+                continue
+
+            x2, y2, w2, h2 = boxes[j]
+
+            # Compute centers
+            cx1, cy1 = x1 + w1 // 2, y1 + h1 // 2
+            cx2, cy2 = x2 + w2 // 2, y2 + h2 // 2
+
+            # Horizontal overlap check
+            horizontal_overlap = (x1 <= x2 + w2 and x2 <= x1 + w1)
+            horizontal_close = abs((x1 + w1) - x2) < x_thresh or abs((x2 + w2) - x1) < x_thresh
+
+            # Vertical center closeness
+            vertical_close = abs(cy1 - cy2) < y_thresh
+
+            # --------- NEW: Divide symbol logic ----------
+            both_narrow = w1 < 20 and w2 < 20
+            stacked_vertically = abs(cx1 - cx2) < 10 and (abs((y1 + h1) - y2) < y_thresh or abs((y2 + h2) - y1) < y_thresh)
+            is_divide_candidate = both_narrow and stacked_vertically
+            # ---------------------------------------------
+
+            if (horizontal_overlap or horizontal_close) and vertical_close:
+                if w1 > 20 and w2 > 20:
+                    continue  # skip merging wide boxes
+                group.append((x2, y2, w2, h2))
+                used[j] = True
+
+            elif is_divide_candidate:
+                group.append((x2, y2, w2, h2))
+                used[j] = True
+
+        # Merge grouped boxes
+        x_coords = [b[0] for b in group]
+        y_coords = [b[1] for b in group]
+        x_ends = [b[0] + b[2] for b in group]
+        y_ends = [b[1] + b[3] for b in group]
+
+        merged_x = min(x_coords)
+        merged_y = min(y_coords)
+        merged_w = max(x_ends) - merged_x
+        merged_h = max(y_ends) - merged_y
+
+        merged.append((merged_x, merged_y, merged_w, merged_h))
+
     return merged
 
 # ---- Pad to Square Shape ----
-def make_square(img):
-    h, w = img.shape
-    size = max(h, w)
-    square = np.ones((size, size), dtype=np.uint8) * 255
-    y_offset = (size - h) // 2
-    x_offset = (size - w) // 2
-    square[y_offset:y_offset + h, x_offset:x_offset + w] = img
-    return square
+def make_square(image, value=0):
+    h, w = image.shape
+    if h == w:
+        return image
+    if h > w:
+        pad = (h - w)
+        left = pad // 2
+        right = pad - left
+        return cv2.copyMakeBorder(image, 0, 0, left, right, cv2.BORDER_CONSTANT, value=value)
+    else:
+        pad = (w - h)
+        top = pad // 2
+        bottom = pad - top
+        return cv2.copyMakeBorder(image, top, bottom, 0, 0, cv2.BORDER_CONSTANT, value=value)
 
 # ---- Preprocess Individual Symbol ----
-def preprocess_symbol(cropped_img):
-    if cropped_img.size == 0:
+def preprocess_symbol(cropped):
+    h, w = cropped.shape[:2]
+    if h == 0 or w == 0:
         return None, None
 
-    resized = make_square(cropped_img)
-    resized = cv2.resize(resized, (28, 28), interpolation=cv2.INTER_AREA)
+    scale = 20.0 / max(w, h)
+    new_w = max(1, int(w * scale))
+    new_h = max(1, int(h * scale))
 
-    # Normalize and reshape for CNN
-    input_img = resized.astype("float32") / 255.0
-    input_img = np.expand_dims(input_img, axis=(0, -1))  # shape (1, 28, 28, 1)
+    resized = cv2.resize(cropped, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
-    return input_img, resized  # return both CNN input and visualization
+    # Pad into 28x28
+    padded = np.zeros((28, 28), dtype=np.uint8)
+    x_offset = (28 - new_w) // 2
+    y_offset = (28 - new_h) // 2
+    padded[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
+
+    padded_visual = padded.copy()
+
+    padded = padded.astype('float32') / 255.0
+    padded = padded.reshape(1, 28, 28, 1)
+
+    return padded, padded_visual
