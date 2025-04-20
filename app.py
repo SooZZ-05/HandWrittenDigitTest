@@ -182,8 +182,16 @@ elif mode == "✍️ Draw on Whiteboard":
         # Convert to grayscale
         gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
 
-        st.image(blended_image, caption="Your Drawing", use_container_width=True)
-
+        # Binarize to make strokes clearer
+        _, gray_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY_INV)
+        
+        # Optional: Thicken strokes slightly (optional but helpful)
+        kernel = np.ones((3, 3), np.uint8)
+        gray_img = cv2.dilate(gray_img, kernel, iterations=1)
+        
+        # Show processed drawing
+        st.image(gray_img, caption="Processed Drawing for Detection", use_container_width=True)
+        
         # Use shared prediction function
         expression, result_img = predict_expression_from_image(gray_img)
         st.image(result_img, caption="Detected Boxes", use_container_width=True)
