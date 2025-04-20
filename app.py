@@ -157,42 +157,31 @@ if mode == "📤 Upload Image":
 elif mode == "✍️ Draw on Whiteboard":
     st.subheader("Draw your equation below:")
 
-    # Buttons for user interaction
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        finish = st.button("✅ Finish")
-    with col2:
-        clear = st.button("🗑️ Clear", type="primary")
-
-    # Draw canvas
+    # Draw canvas (auto-updates)
     canvas_result = st_canvas(
-        fill_color="#FFFFFF",  # This is the background color
+        fill_color="#FFFFFF",
         stroke_width=6,
-        stroke_color="#000000",  # Black pen
+        stroke_color="#000000",
         background_color="#FFFFFF",
         height=280,
         width=600,
         drawing_mode="freedraw",
         key="canvas",
-        update_streamlit=not clear,
+        update_streamlit=True,
     )
 
-    if clear:
-        st.experimental_rerun()
-
-    if finish and canvas_result.image_data is not None:
-        # Convert drawn image to uint8 grayscale
+    if canvas_result.image_data is not None:
+        # Convert RGBA float (0–1) to uint8 (0–255)
         rgba_image = (canvas_result.image_data * 255).astype(np.uint8)
 
         # Separate alpha channel and blend onto white background
         alpha = rgba_image[:, :, 3] / 255.0
         white_bg = np.ones_like(rgba_image[:, :, :3], dtype=np.uint8) * 255
         blended_image = (alpha[..., None] * rgba_image[:, :, :3] + (1 - alpha[..., None]) * white_bg).astype(np.uint8)
-        
+
         # Convert to grayscale
         gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
-        
-        # Show clean canvas as drawn
+
         st.image(blended_image, caption="Your Drawing", use_container_width=True)
 
         # Use shared prediction function
