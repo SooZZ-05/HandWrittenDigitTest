@@ -183,7 +183,12 @@ elif mode == "✍️ Draw on Whiteboard":
         gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
 
         # Binarize to make strokes clearer
-        _, gray_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY_INV)
+        _, gray_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
+        gray_img = cv2.bitwise_not(gray_img)  # Optional: make strokes white on black if model expects it
+        
+        # Optional: Thicken strokes
+        kernel = np.ones((3, 3), np.uint8)
+        gray_img = cv2.dilate(gray_img, kernel, iterations=1)
         
         # Optional: Thicken strokes slightly (optional but helpful)
         kernel = np.ones((3, 3), np.uint8)
