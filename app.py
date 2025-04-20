@@ -11,6 +11,61 @@ from utils import (
     load_models, load_mini_model
 )
 
+def predict_expression_from_image(gray_img):
+    # Invert and binarize
+    inverted = cv2.bitwise_not(gray_img)
+    _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
+
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    bounding_boxes = [cv2.boundingRect(c) for c in contours]
+    merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=40)
+    sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
+
+    img_copy = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2BGR)
+    for x, y, w, h in sorted_boxes:
+        cv2.rectangle(img_copy, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+    models, class_labels = load_models()
+    mini_model, mini_class_labels = load_mini_model()
+
+    expression = ""
+    prev_label = ""
+
+    for x, y, w, h in sorted_boxes:
+        if w < 2 or h < 2 or w * h < 10:
+            continue
+
+        cropped = binary[y:y + h, x:x + w]
+        input_img, _ = preprocess_symbol(cropped)
+        if input_img is None:
+            continue
+
+        predictions = [m.predict(input_img, verbose=0) for m in models]
+        avg_prediction = np.mean(predictions, axis=0)
+        confidence = np.max(avg_prediction)
+        predicted_class = np.argmax(avg_prediction)
+        predicted_label = class_labels[predicted_class]
+
+        if predicted_label in mini_class_labels and confidence <= 1.0:
+            mini_pred = mini_model.predict(input_img, verbose=0)
+            mini_class = np.argmax(mini_pred)
+            mini_label = mini_class_labels[mini_class]
+            if mini_label != predicted_label:
+                predicted_label = mini_label
+
+        if confidence < 0.3 or (predicted_label in "+-*/" and prev_label in "+-*/"):
+            continue
+
+        expression += predicted_label
+        prev_label = predicted_label
+
+    # Final cleanup
+    expression = re.sub(r'^[*/+\-]+', '', expression)
+    expression = re.sub(r'[*/+\-]+$', '', expression)
+
+    return expression, img_copy
+
+
 st.set_page_config(page_title="Handwritten Equation App", layout="wide")
 
 # App title
@@ -102,101 +157,49 @@ if mode == "📤 Upload Image":
 elif mode == "✍️ Draw on Whiteboard":
     st.subheader("Draw your equation below:")
 
-    # Canvas for free drawing
+    # Buttons for user interaction
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        finish = st.button("✅ Finish")
+    with col2:
+        clear = st.button("🗑️ Clear", type="primary")
+
+    # Draw canvas
     canvas_result = st_canvas(
-        fill_color="#000000", 
+        fill_color="#FFFFFF",  # This is the background color
         stroke_width=6,
-        stroke_color="#000000", 
+        stroke_color="#000000",  # Black pen
         background_color="#FFFFFF",
-        height=280, 
+        height=280,
         width=600,
         drawing_mode="freedraw",
         key="canvas",
+        update_streamlit=not clear,
     )
 
-    if canvas_result.image_data is not None:
-        # Convert the drawn canvas (RGBA to RGB) and then to grayscale
+    if clear:
+        st.experimental_rerun()
+
+    if finish and canvas_result.image_data is not None:
+        # Convert drawn image to uint8 grayscale
         drawn_image = (canvas_result.image_data[:, :, :3] * 255).astype(np.uint8)
-
-        # Convert drawn image to grayscale
         gray_img = cv2.cvtColor(drawn_image, cv2.COLOR_RGB2GRAY)
+        st.image(gray_img, caption="Your Drawing", use_container_width=True)
 
-        # Invert the image for better contrast (white on black)
-        gray_img = cv2.bitwise_not(gray_img)
-        st.image(gray_img, caption="Inverted Drawing", use_container_width=True)
+        # Use shared prediction function
+        expression, result_img = predict_expression_from_image(gray_img)
+        st.image(result_img, caption="Detected Boxes", use_container_width=True)
 
-        # Preprocess the image for contour detection
-        _, binary = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY)
-        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        bounding_boxes = [cv2.boundingRect(c) for c in contours]
-        merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=40)
-        sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
-
-        # Draw detected boxes on the image
-        img_copy = cv2.cvtColor(drawn_image, cv2.COLOR_RGB2BGR)
-        for x, y, w, h in sorted_boxes:
-            cv2.rectangle(img_copy, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        st.image(img_copy, caption="Detected Boxes", use_container_width=True)
-
-        # Load models (call only once)
-        models, class_labels = load_models()
-        mini_model, mini_class_labels = load_mini_model()
-
-        expression = ""
-        prev_label = ""
-        wrong_predictions = []
-
-        # Predict and build the expression
-        for x, y, w, h in sorted_boxes:
-            if w < 2 or h < 2 or w * h < 10:
-                continue
-
-            cropped = binary[y:y+h, x:x+w]
-            input_img, padded_visual = preprocess_symbol(cropped)
-            if input_img is None:
-                continue
-
-            # Get predictions from all models
-            predictions = [m.predict(input_img, verbose=0) for m in models]
-            avg_prediction = np.mean(predictions, axis=0)
-            confidence = np.max(avg_prediction)
-            predicted_class = np.argmax(avg_prediction)
-            predicted_label = class_labels[predicted_class]
-
-            # Handle mini-model corrections
-            if predicted_label in mini_class_labels and confidence <= 1.0:
-                mini_pred = mini_model.predict(input_img, verbose=0)
-                mini_class = np.argmax(mini_pred)
-                mini_label = mini_class_labels[mini_class]
-                if mini_label != predicted_label:
-                    predicted_label = mini_label
-
-            if confidence < 0.3:
-                continue
-
-            # Avoid consecutive operators
-            if predicted_label in "+-*/" and prev_label in "+-*/":
-                continue
-
-            expression += predicted_label
-            prev_label = predicted_label
-
-        # Final cleanup
-        expression = re.sub(r'^[*/+\-]+', '', expression)
-        expression = re.sub(r'[*/+\-]+$', '', expression)
-
-        # Show recognized expression
+        # Display result
         st.markdown(
             f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
             unsafe_allow_html=True,
         )
-
-        # Evaluate and show result
         try:
             result = eval(expression)
             st.markdown(
                 f"<h2 style='font-size: 40px; color: green;'>✅ Result: <code>{expression} = {result}</code></h2>",
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
         except:
             st.error("❌ Failed to evaluate expression")
