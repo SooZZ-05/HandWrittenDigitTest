@@ -182,9 +182,18 @@ elif mode == "✍️ Draw on Whiteboard":
 
     if finish and canvas_result.image_data is not None:
         # Convert drawn image to uint8 grayscale
-        drawn_image = (canvas_result.image_data[:, :, :3] * 255).astype(np.uint8)
-        gray_img = cv2.cvtColor(drawn_image, cv2.COLOR_RGB2GRAY)
-        st.image(gray_img, caption="Your Drawing", use_container_width=True)
+        rgba_image = (canvas_result.image_data * 255).astype(np.uint8)
+
+        # Separate alpha channel and blend onto white background
+        alpha = rgba_image[:, :, 3] / 255.0
+        white_bg = np.ones_like(rgba_image[:, :, :3], dtype=np.uint8) * 255
+        blended_image = (alpha[..., None] * rgba_image[:, :, :3] + (1 - alpha[..., None]) * white_bg).astype(np.uint8)
+        
+        # Convert to grayscale
+        gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
+        
+        # Show clean canvas as drawn
+        st.image(blended_image, caption="Your Drawing", use_container_width=True)
 
         # Use shared prediction function
         expression, result_img = predict_expression_from_image(gray_img)
