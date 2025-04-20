@@ -17,6 +17,3 @@ This Streamlit app allows users to upload images of handwritten mathematical equ
 - NumPy
 - Matplotlib
 - Streamlit
-
-## 📁 File Structure
-handwritten-equation-app/ ├── app.py ├── utils.py ├── models/ │ ├── CNNModel_0.json │ ├── CNNModel_0.weights.h5 │ └── ... up to CNNModel_9 ├── test_images/ ├── requirements.txt └── README.md
