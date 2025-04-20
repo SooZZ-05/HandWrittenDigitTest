@@ -16,8 +16,8 @@ mini_labels = ['1', '2', '7']
 @st.cache_resource
 def load_all_models():
     model_paths = [(f"models/CNNModel_{i}.json", f"models/CNNModel_{i}.weights.h5") for i in range(10)]
-    mini_model_path = "models/MiniCNNModel.json"
-    mini_weights_path = "models/MiniCNNModel.weights.h5"
+    mini_model_path = "models/MiniCNN_127.json"
+    mini_weights_path = "models/MiniCNN_127.weights.h5"
     return load_models(model_paths, mini_model_path, mini_weights_path, mini_labels)
 
 models, mini_model, mini_labels = load_all_models()
