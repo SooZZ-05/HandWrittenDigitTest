@@ -1,6 +1,5 @@
 streamlit
-opencv-python
 tensorflow
-keras
-matplotlib
 numpy
+matplotlib
+pillow
