@@ -1,100 +1,84 @@
 import streamlit as st
-import cv2
 import numpy as np
-import matplotlib.pyplot as plt
+import cv2
 from PIL import Image
-from utils import load_models, merge_contours, preprocess_symbol, mini_model, class_labels, mini_class_labels
-import re
+import matplotlib.pyplot as plt
+
+from utils import (
+    load_models, merge_contours, preprocess_symbol, predict_symbol,
+    resolve_confusion, evaluate_expression
+)
 
 # Load models once
-models = load_models()
-# st.set_option('deprecation.showPyplotGlobalUse', False)
+ensemble_models, minicorn_model = load_models()
 
-st.title("🧮 Handwritten Math Expression Recognizer")
+st.set_page_config(page_title="Handwritten Equation Solver", layout="wide")
+st.title("🧠 Handwritten Math Expression Recognizer")
 
-uploaded_file = st.file_uploader("Upload an image", type=['jpg', 'jpeg', 'png'])
+uploaded_file = st.file_uploader("Upload an image of a handwritten equation", type=["png", "jpg", "jpeg"])
 
 if uploaded_file:
-    # Show original image
-    image = Image.open(uploaded_file).convert('L')
-    img = np.array(image)
+    image = np.array(Image.open(uploaded_file).convert("RGB"))
     st.subheader("📷 Original Image")
-    st.image(img, use_column_width=True)
+    st.image(image, use_column_width=True)
 
-    # Invert and binarize
-    inverted = cv2.bitwise_not(img)
-    _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
+    # Step 1: Convert to grayscale and find contours
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    contours = merge_contours(gray)
 
-    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    bounding_boxes = [cv2.boundingRect(c) for c in contours]
-    merged_boxes = merge_contours(bounding_boxes)
-    sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
+    # Step 2: Draw contours
+    boxed_image = image.copy()
+    for x, y, w, h in contours:
+        cv2.rectangle(boxed_image, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-    # Draw and show bounding boxes
-    img_copy = cv2.cvtColor(inverted, cv2.COLOR_GRAY2BGR)
-    for x, y, w, h in sorted_boxes:
-        cv2.rectangle(img_copy, (x, y), (x+w, y+h), (0, 255, 0), 2)
+    st.subheader("🟥 Detected Symbols (Bounding Boxes)")
+    st.image(boxed_image, use_column_width=True)
 
-    st.subheader("🔲 Detected Boxes")
-    st.image(img_copy, use_column_width=True)
+    symbols = []
+    cnn_inputs = []
+    predictions = []
+    confidences = []
 
-    expression = ""
-    prev_label = ""
-    wrong_predictions = []
+    # Step 3: Predict each symbol
+    for box in contours:
+        x, y, w, h = box
+        roi = gray[y:y+h, x:x+w]
+        input_img = preprocess_symbol(roi)
+        cnn_inputs.append(input_img)
 
-    for x, y, w, h in sorted_boxes:
-        if w * h < 10:
-            continue
+        label, conf, conf_dict = predict_symbol(input_img, ensemble_models)
+        if conf < 0.90 and label in ['1', '2', '7']:
+            label = resolve_confusion(input_img, minicorn_model)
 
-        cropped = binary[y:y+h, x:x+w]
-        input_img, padded_visual = preprocess_symbol(cropped)
-        if input_img is None:
-            continue
+        symbols.append(label)
+        predictions.append((label, conf_dict))
+        confidences.append(conf)
 
-        predictions = [m.predict(input_img, verbose=0) for m in models]
-        avg_prediction = np.mean(predictions, axis=0)
-        confidence = np.max(avg_prediction)
-        predicted_class = np.argmax(avg_prediction)
-        predicted_label = class_labels[predicted_class]
+    # Step 4: Show CNN inputs
+    st.subheader("📥 CNN Inputs (Preprocessed 28x28)")
+    cols = st.columns(min(6, len(cnn_inputs)))
+    for i, img in enumerate(cnn_inputs):
+        with cols[i % len(cols)]:
+            st.image(img.reshape(28, 28), width=50, caption=symbols[i])
 
-        if predicted_label in mini_class_labels and confidence <= 1.0:
-            mini_pred = mini_model.predict(input_img, verbose=0)
-            mini_class = np.argmax(mini_pred)
-            mini_label = mini_class_labels[mini_class]
-            if mini_label != predicted_label:
-                predicted_label = mini_label
-
-        if confidence < 0.3 or (predicted_label in "+-*/" and prev_label in "+-*/"):
-            continue
-
-        # Show subplots for each symbol
-        st.markdown("---")
-        st.markdown(f"**🧠 Symbol at (x={x}, y={y}, w={w}, h={h})**")
-        fig, axes = plt.subplots(1, 3, figsize=(10, 3))
-        axes[0].imshow(cropped, cmap='gray')
-        axes[0].set_title("Cropped")
-
-        axes[1].imshow(padded_visual, cmap='gray')
-        axes[1].set_title("Input to CNN")
-
-        axes[2].bar(class_labels, avg_prediction[0])
-        axes[2].set_ylim([0, 1.0])
-        axes[2].set_title(f"Prediction: {predicted_label} ({confidence:.2f})")
-
+    # Step 5: Plot confidence bars
+    st.subheader("📊 Prediction Confidence per Symbol")
+    for i, (label, conf_dict) in enumerate(predictions):
+        fig, ax = plt.subplots(figsize=(4, 2))
+        sorted_items = sorted(conf_dict.items(), key=lambda x: x[1], reverse=True)
+        labels = [item[0] for item in sorted_items][:5]
+        values = [item[1] for item in sorted_items][:5]
+        ax.bar(labels, values, color='skyblue')
+        ax.set_ylim([0, 1])
+        ax.set_title(f"Symbol {i+1} Prediction: {label}")
         st.pyplot(fig)
 
-        expression += predicted_label
-        prev_label = predicted_label
+    # Step 6: Final expression and result
+    expression = ''.join(symbols)
+    result = evaluate_expression(expression)
 
-    # Final expression
-    expression = re.sub(r'^[*/+\-]+', '', expression)
-    expression = re.sub(r'[*/+\-]+$', '', expression)
-
-    st.markdown("## ✍️ Recognized Expression")
+    st.subheader("🧾 Final Expression")
     st.code(expression)
 
-    try:
-        result = eval(expression)
-        st.markdown(f"## ✅ Final Result: `{expression} = {result}`")
-    except:
-        st.markdown("❌ Failed to evaluate expression.")
+    st.subheader("✅ Evaluated Result")
+    st.success(result)
