@@ -157,7 +157,7 @@ if mode == "📤 Upload Image":
 elif mode == "✍️ Draw on Whiteboard":
     st.subheader("Draw your equation below:")
 
-    # Draw canvas (auto-updates)
+    # Draw canvas with update_streamlit turned off to prevent re-run while drawing.
     canvas_result = st_canvas(
         fill_color="#FFFFFF",
         stroke_width=6,
@@ -167,59 +167,53 @@ elif mode == "✍️ Draw on Whiteboard":
         width=600,
         drawing_mode="freedraw",
         key="canvas",
-        update_streamlit=True,
+        update_streamlit=False,  # Important: disable auto-update
     )
+    
+    # Add a button to process the drawing when ready.
+    if st.button("Recognize Equation"):
+        if canvas_result.image_data is None:
+            st.error("No drawing data found. Please draw your equation in the canvas and try again.")
+        else:
+            # Debug: print shape info of raw canvas data
+            st.write("Canvas image data shape:", canvas_result.image_data.shape)
+            
+            # Convert RGBA float (0–1) to uint8 (0–255)
+            rgba_image = (canvas_result.image_data * 255).astype(np.uint8)
+            st.image(rgba_image, caption="🎨 Original RGBA from Canvas", use_container_width=True)
+            
+            # Separate the alpha channel and blend onto a white background
+            alpha = rgba_image[:, :, 3] / 255.0
+            white_bg = np.ones_like(rgba_image[:, :, :3], dtype=np.uint8) * 255
+            blended_image = (alpha[..., None] * rgba_image[:, :, :3] + (1 - alpha[..., None]) * white_bg).astype(np.uint8)
+            st.image(blended_image, caption="🧾 Blended Image (RGB)", use_container_width=True)
 
-    if canvas_result.image_data is not None:
-        # Convert RGBA float (0–1) to uint8 (0–255)
-        rgba_image = (canvas_result.image_data * 255).astype(np.uint8)
+            # Convert to grayscale
+            gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
+            st.image(gray_img, caption="🧊 Grayscale Image", use_container_width=True)
 
-        #1
-        st.image(rgba_image, caption="🎨 Original RGBA from Canvas", use_container_width=True)
-        
-        # Separate alpha channel and blend onto white background
-        alpha = rgba_image[:, :, 3] / 255.0
-        white_bg = np.ones_like(rgba_image[:, :, :3], dtype=np.uint8) * 255
-        blended_image = (alpha[..., None] * rgba_image[:, :, :3] + (1 - alpha[..., None]) * white_bg).astype(np.uint8)
+            # Binarize to enhance strokes
+            _, gray_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
+            gray_img = cv2.bitwise_not(gray_img)  # Invert if needed
+            
+            # Optionally thicken strokes
+            kernel = np.ones((3, 3), np.uint8)
+            gray_img = cv2.dilate(gray_img, kernel, iterations=1)
+            st.image(gray_img, caption="Processed Drawing for Detection", use_container_width=True)
+            
+            # Use the shared prediction function
+            expression, result_img = predict_expression_from_image(gray_img)
+            st.image(result_img, caption="Detected Boxes", use_container_width=True)
 
-        #2
-        st.image(blended_image, caption="🧾 Blended Image (RGB)", use_container_width=True)
-
-        # Convert to grayscale
-        gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
-
-        #3
-        st.image(gray_img, caption="🧊 Thresholded Image (Post-Processing)", use_container_width=True)
-
-        # Binarize to make strokes clearer
-        _, gray_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
-        gray_img = cv2.bitwise_not(gray_img)  # Optional: make strokes white on black if model expects it
-        
-        # Optional: Thicken strokes
-        kernel = np.ones((3, 3), np.uint8)
-        gray_img = cv2.dilate(gray_img, kernel, iterations=1)
-        
-        # Optional: Thicken strokes slightly (optional but helpful)
-        kernel = np.ones((3, 3), np.uint8)
-        gray_img = cv2.dilate(gray_img, kernel, iterations=1)
-        
-        # Show processed drawing
-        st.image(gray_img, caption="Processed Drawing for Detection", use_container_width=True)
-        
-        # Use shared prediction function
-        expression, result_img = predict_expression_from_image(gray_img)
-        st.image(result_img, caption="Detected Boxes", use_container_width=True)
-
-        # Display result
-        st.markdown(
-            f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
-            unsafe_allow_html=True,
-        )
-        try:
-            result = eval(expression)
             st.markdown(
-                f"<h2 style='font-size: 40px; color: green;'>✅ Result: <code>{expression} = {result}</code></h2>",
+                f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
                 unsafe_allow_html=True,
             )
-        except:
-            st.error("❌ Failed to evaluate expression")
+            try:
+                result = eval(expression)
+                st.markdown(
+                    f"<h2 style='font-size: 40px; color: green;'>✅ Result: <code>{expression} = {result}</code></h2>",
+                    unsafe_allow_html=True,
+                )
+            except Exception as e:
+                st.error("❌ Failed to evaluate expression")
