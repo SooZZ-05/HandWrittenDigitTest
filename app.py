@@ -174,13 +174,22 @@ elif mode == "✍️ Draw on Whiteboard":
         # Convert RGBA float (0–1) to uint8 (0–255)
         rgba_image = (canvas_result.image_data * 255).astype(np.uint8)
 
+        #1
+        st.image(rgba_image, caption="🎨 Original RGBA from Canvas", use_container_width=True)
+        
         # Separate alpha channel and blend onto white background
         alpha = rgba_image[:, :, 3] / 255.0
         white_bg = np.ones_like(rgba_image[:, :, :3], dtype=np.uint8) * 255
         blended_image = (alpha[..., None] * rgba_image[:, :, :3] + (1 - alpha[..., None]) * white_bg).astype(np.uint8)
 
+        #2
+        st.image(blended_image, caption="🧾 Blended Image (RGB)", use_container_width=True)
+
         # Convert to grayscale
         gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
+
+        #3
+        st.image(gray_img, caption="🧊 Thresholded Image (Post-Processing)", use_container_width=True)
 
         # Binarize to make strokes clearer
         _, gray_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
