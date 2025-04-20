@@ -81,12 +81,15 @@ if uploaded_file:
     expression = re.sub(r'[*/+\-]+$', '', expression)
 
     st.markdown(
-        f"<h2 style='font-size: 28px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
+        f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
         unsafe_allow_html=True,
     )
     
     try:
         result = eval(expression)
-        st.success(f"✅ Result: `{expression} = {result}`")
+        st.markdown(
+            f"<h2 style='font-size: 40px; color: green;'>✅ Result: <code>{expression} = {result}</code></h2>",
+            unsafe_allow_html=True
+        )
     except:
         st.error("❌ Failed to evaluate expression")
