@@ -106,8 +106,8 @@ elif mode == "✍️ Draw on Whiteboard":
     canvas_result = st_canvas(
         fill_color="#000000", 
         stroke_width=6,
-        stroke_color="#FFFFFF", 
-        background_color="#000000",
+        stroke_color="#000000", 
+        background_color="#FFFFFF",
         height=280, 
         width=600,
         drawing_mode="freedraw",
