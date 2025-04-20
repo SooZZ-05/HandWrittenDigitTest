@@ -1,87 +1,89 @@
-# app.py
 import streamlit as st
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2
-from utils import load_models, predict_expression
+import re
+from tensorflow.keras.models import model_from_json
 
-# Set Streamlit page config
-st.set_page_config(page_title="Handwritten Equation Recognizer", layout="wide")
+from utils import (
+    merge_contours, preprocess_symbol, make_square, 
+    load_models, load_mini_model
+)
 
-# Class labels
-class_labels = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '-', '*', '/']
-mini_labels = ['1', '2', '7']
+# App title
+st.title("🧠 Handwritten Equation Recognizer")
 
-# Load models (cached to avoid reloading every time)
-@st.cache_resource
-def load_all_models():
-    model_paths = [(f"models/CNNModel_{i}.json", f"models/CNNModel_{i}.weights.h5") for i in range(10)]
-    mini_model_path = "models/MiniCNN_127.json"
-    mini_weights_path = "models/MiniCNN_127.weights.h5"
-    return load_models(model_paths, mini_model_path, mini_weights_path, mini_labels)
+# File uploader
+uploaded_file = st.file_uploader("Upload an image of a handwritten equation", type=['jpg', 'jpeg', 'png'])
 
-models, mini_model, mini_labels = load_all_models()
-
-# Streamlit UI
-st.title("📝 Handwritten Equation Recognizer")
-st.markdown("Upload an image containing a handwritten equation and the app will predict and solve it!")
-
-uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
-
-if uploaded_file is not None:
-    # Read image
+if uploaded_file:
     file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-    image = cv2.imdecode(file_bytes, cv2.IMREAD_GRAYSCALE)
+    img = cv2.imdecode(file_bytes, cv2.IMREAD_GRAYSCALE)
 
-    st.subheader("Original Image")
-    st.image(image, use_column_width=True, channels="GRAY")
+    img = cv2.bitwise_not(img)
+    st.image(img, caption="Inverted Image", use_column_width=True)
 
-    # Preprocessing
-    inverted = cv2.bitwise_not(image)
-    _, binary = cv2.threshold(inverted, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    _, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
 
-    st.subheader("Preprocessed Image")
-    fig, axs = plt.subplots(1, 2, figsize=(10, 4))
-    axs[0].imshow(inverted, cmap='gray')
-    axs[0].set_title('Inverted')
-    axs[0].axis('off')
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    bounding_boxes = [cv2.boundingRect(c) for c in contours]
+    merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=40)
+    sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
 
-    axs[1].imshow(binary, cmap='gray')
-    axs[1].set_title('Binary (Thresholded)')
-    axs[1].axis('off')
-    st.pyplot(fig)
+    # Draw detected boxes
+    img_copy = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    for x, y, w, h in sorted_boxes:
+        cv2.rectangle(img_copy, (x, y), (x+w, y+h), (0, 255, 0), 2)
+    st.image(img_copy, caption="Detected Boxes", use_column_width=True)
 
-    # Prediction
-    with st.spinner("Predicting..."):
-        expression, result, sorted_boxes, prediction_data = predict_expression(binary, models, mini_model, class_labels, mini_labels)
+    # Load models (call only once)
+    models, class_labels = load_models()
+    mini_model, mini_class_labels = load_mini_model()
 
-    st.subheader("Detected Expression")
-    if expression:
-        st.success(f"**{expression}** = **{result}**")
-    else:
-        st.error("No valid expression detected.")
+    expression = ""
+    prev_label = ""
+    wrong_predictions = []
 
-    # Show detected bounding boxes
-    if sorted_boxes:
-        st.subheader("Detected Symbols")
-        boxed_image = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
-        for x, y, w, h in sorted_boxes:
-            cv2.rectangle(boxed_image, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        st.image(boxed_image, channels="BGR", use_column_width=True)
+    for x, y, w, h in sorted_boxes:
+        if w < 2 or h < 2 or w * h < 10:
+            continue
 
-    # Show prediction confidences
-    if prediction_data:
-        st.subheader("Symbol Predictions and Confidences")
-        for idx, data in enumerate(prediction_data):
-            st.markdown(f"**Symbol {idx+1}: `{data['label']}` (Confidence: {data['confidence']:.2f})**")
+        cropped = binary[y:y+h, x:x+w]
+        input_img, padded_visual = preprocess_symbol(cropped)
+        if input_img is None:
+            continue
 
-            col1, col2 = st.columns(2)
-            with col1:
-                st.image(data["cnn_input"], width=150, caption="Preprocessed Input")
+        predictions = [m.predict(input_img, verbose=0) for m in models]
+        avg_prediction = np.mean(predictions, axis=0)
 
-            with col2:
-                fig, ax = plt.subplots(figsize=(6, 2))
-                ax.bar(class_labels, data["confidences"])
-                ax.set_ylim(0, 1)
-                ax.set_title('Prediction Confidence')
-                st.pyplot(fig)
+        confidence = np.max(avg_prediction)
+        predicted_class = np.argmax(avg_prediction)
+        predicted_label = class_labels[predicted_class]
+
+        if predicted_label in mini_class_labels and confidence <= 1.0:
+            mini_pred = mini_model.predict(input_img, verbose=0)
+            mini_class = np.argmax(mini_pred)
+            mini_label = mini_class_labels[mini_class]
+            if mini_label != predicted_label:
+                predicted_label = mini_label
+
+        if confidence < 0.3:
+            continue
+
+        if predicted_label in "+-*/" and prev_label in "+-*/":
+            continue
+
+        expression += predicted_label
+        prev_label = predicted_label
+
+    # Final cleanup
+    expression = re.sub(r'^[*/+\-]+', '', expression)
+    expression = re.sub(r'[*/+\-]+$', '', expression)
+
+    st.markdown(f"### ✍️ Recognized Expression: `{expression}`")
+
+    try:
+        result = eval(expression)
+        st.success(f"✅ Result: `{expression} = {result}`")
+    except:
+        st.error("❌ Failed to evaluate expression")
