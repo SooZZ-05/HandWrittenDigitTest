@@ -21,7 +21,32 @@ def predict_expression_from_image(gray_img):
     merged_boxes = merge_contours(merged_once, x_thresh=15, y_thresh=0)
     # merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
     sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
+    final_boxes = []
+    for x, y, w, h in sorted_boxes:
+        aspect_ratio = w / float(h)
 
+        if aspect_ratio > 1.2:  # Possibly two characters merged together
+            roi = binary[y:y+h, x:x+w]  # Get the cropped region from binary
+
+            projection = np.sum(roi, axis=0)
+            threshold = 0.05 * np.max(projection)
+
+            split_indices = []
+            for i in range(1, len(projection) - 1):
+                if projection[i] < threshold and projection[i - 1] >= threshold and projection[i + 1] >= threshold:
+                    split_indices.append(i)
+
+            if split_indices:
+                prev = 0
+                for idx in split_indices + [w]:
+                    if idx - prev > 5:
+                        final_boxes.append((x + prev, y, idx - prev, h))
+                    prev = idx
+            else:
+                final_boxes.append((x, y, w, h))
+        else:
+            final_boxes.append((x, y, w, h))
+    sorted_boxes = final_boxes
     img_copy = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2BGR)
     for x, y, w, h in sorted_boxes:
         cv2.rectangle(img_copy, (x, y), (x + w, y + h), (0, 255, 0), 2)
@@ -151,7 +176,32 @@ elif mode == "✍️ Draw on Whiteboard":
                 merged_boxes = merge_contours(merged_once, x_thresh=15, y_thresh=0)
                 # merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
                 sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
-
+                final_boxes = []
+                for x, y, w, h in sorted_boxes:
+                    aspect_ratio = w / float(h)
+            
+                    if aspect_ratio > 1.2:  # Possibly two characters merged together
+                        roi = binary[y:y+h, x:x+w]  # Get the cropped region from binary
+            
+                        projection = np.sum(roi, axis=0)
+                        threshold = 0.05 * np.max(projection)
+            
+                        split_indices = []
+                        for i in range(1, len(projection) - 1):
+                            if projection[i] < threshold and projection[i - 1] >= threshold and projection[i + 1] >= threshold:
+                                split_indices.append(i)
+            
+                        if split_indices:
+                            prev = 0
+                            for idx in split_indices + [w]:
+                                if idx - prev > 5:
+                                    final_boxes.append((x + prev, y, idx - prev, h))
+                                prev = idx
+                        else:
+                            final_boxes.append((x, y, w, h))
+                    else:
+                        final_boxes.append((x, y, w, h))
+                sorted_boxes = final_boxes
                 img_copy = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2BGR)
                 for x, y, w, h in sorted_boxes:
                     cv2.rectangle(img_copy, (x, y), (x + w, y + h), (0, 255, 0), 2)
