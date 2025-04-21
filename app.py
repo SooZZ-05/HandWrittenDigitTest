@@ -23,7 +23,7 @@ def predict_expression_from_image(gray_img):
     sure_fg = np.uint8(sure_fg)
     
     # Find unknown region
-    sure_bg = cv2.dilate(inv, np.ones((3, 3), np.uint8), iterations=1)
+    sure_bg = cv2.dilate(inverted, np.ones((3, 3), np.uint8), iterations=1)
     unknown = cv2.subtract(sure_bg, sure_fg)
     
     # Connected components as markers
@@ -178,7 +178,7 @@ elif mode == "✍️ Draw on Whiteboard":
                 sure_fg = np.uint8(sure_fg)
                 
                 # Find unknown region
-                sure_bg = cv2.dilate(inv, np.ones((3, 3), np.uint8), iterations=1)
+                sure_bg = cv2.dilate(inverted, np.ones((3, 3), np.uint8), iterations=1)
                 unknown = cv2.subtract(sure_bg, sure_fg)
                 
                 # Connected components as markers
