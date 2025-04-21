@@ -170,103 +170,89 @@ elif mode == "✍️ Draw on Whiteboard":
     )
 
     if canvas_result.image_data is not None:
-       st.sidebar.success("Drawing detected in canvas state.")
+        st.sidebar.success("Drawing detected in canvas state.")
     else:
-       st.sidebar.warning("No drawing in canvas state.")
-    
+        st.sidebar.warning("No drawing in canvas state.")
+
     if st.button("Recognize Equation"):
         if canvas_result.image_data is None:
             st.warning("No drawing detected.")
         else:
-            # --- Start Detailed Debugging ---
-            st.write("--- Debug: Raw Image Data ---")
-            st.write(f"Shape: {canvas_result.image_data.shape}")
-            st.write(f"Data type: {canvas_result.image_data.dtype}")
-            st.write(f"Min value: {canvas_result.image_data.min()}")
-            st.write(f"Max value: {canvas_result.image_data.max()}")
-
-            if canvas_result.image_data.shape[2] == 4:
-                alpha_channel = canvas_result.image_data[:, :, 3]
-                st.write(f"Alpha channel Min: {alpha_channel.min()}")
-                st.write(f"Alpha channel Max: {alpha_channel.max()}")
-                # Check if *any* pixel is opaque or semi-opaque
-                st.write(f"Number of pixels with Alpha > 0: {np.sum(alpha_channel > 0)}")
-                # Display Alpha channel itself (should show your drawing in white/gray on black)
-                st.image(alpha_channel, caption="Alpha Channel Only", use_container_width=True)
-            st.write("--- End Raw Data Debug ---")
-
-        st.write("--- Debug: JSON Data ---")
-        if canvas_result.json_data:
-            st.write("JSON data found:")
-            try: # Use try-except as st.json might fail on complex/large data
-                st.json(canvas_result.json_data)
-            except Exception as e:
-                st.write(f"Could not display JSON data: {e}")
-                st.text(str(canvas_result.json_data)) # Display as text if json fails
-        else:
-            st.write("JSON data is empty.")
-        st.write("--- End JSON Data ---")
-    
-        # Modify the check for processing:
-        if canvas_result.image_data is None or canvas_result.image_data.min() == 255:
-             st.error("Drawing not detected in image data (Image is blank white). Cannot process.")
-        else:
-            st.image(canvas_result.image_data, caption="Raw Drawing Data (RGBA)", use_container_width=True)
-
-            # --- Check Scaling ---
-            if canvas_result.image_data.max() <= 1:
-                st.write("Scaling image data from 0-1 to 0-255 range.")
-                rgba_image = (canvas_result.image_data * 255).astype(np.uint8)
+            # Modify the check for processing:
+            if canvas_result.image_data is None or canvas_result.image_data.min() == 255:
+                st.error("Drawing not detected in image data (Image is blank white). Cannot process.")
             else:
-                st.write("Using image data in 0-255 range (or other) directly.")
-                rgba_image = canvas_result.image_data.copy()
+                # Convert RGBA to Grayscale
+                rgba_image = canvas_result.image_data.astype(np.uint8)
+                if rgba_image.shape[2] == 4:
+                    alpha = rgba_image[:, :, 3] / 255.0
+                    white_bg = np.ones_like(rgba_image[:, :, :3], dtype=np.uint8) * 255
+                    blended_image = (alpha[..., None] * rgba_image[:, :, :3] + (1 - alpha[..., None]) * white_bg).astype(np.uint8)
+                    gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
+                else:
+                    gray_img = cv2.cvtColor(rgba_image, cv2.COLOR_RGB2GRAY)
 
-            # Display after potential scaling
-            st.image(rgba_image, caption="🎨 RGBA After Scaling Check", use_container_width=True)
+                # Apply similar processing steps as the upload image prediction
+                inverted = cv2.bitwise_not(gray_img)
+                _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
 
-            # --- Check Blending ---
-            if rgba_image.shape[2] == 4:
-                st.write("Blending RGBA onto white background.")
-                alpha = rgba_image[:, :, 3] / 255.0
-                # Display normalized alpha again if needed
-                # st.image(alpha, caption="Normalized Alpha for Blending", use_container_width=True)
-                white_bg = np.ones_like(rgba_image[:, :, :3], dtype=np.uint8) * 255
-                blended_image = (alpha[..., None] * rgba_image[:, :, :3] + (1 - alpha[..., None]) * white_bg).astype(np.uint8)
-            else:
-                st.write("Image is not RGBA, skipping blending.")
-                blended_image = rgba_image.copy()
+                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                bounding_boxes = [cv2.boundingRect(c) for c in contours]
+                merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=40)
+                sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
 
-            # Display the result of blending
-            st.image(blended_image, caption="🧾 Blended Image (RGB)", use_container_width=True)
+                img_copy = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2BGR)
+                for x, y, w, h in sorted_boxes:
+                    cv2.rectangle(img_copy, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                st.image(img_copy, caption="Detected Boxes (on Drawn Image)", use_container_width=True)
 
-            # --- Check Grayscale and Thresholding ---
-            st.write("Converting to Grayscale.")
-            gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
-            st.write(f"Grayscale Min: {gray_img.min()}, Max: {gray_img.max()}")
-            st.image(gray_img, caption="🧊 Grayscale Image (Before Threshold)", use_container_width=True)
+                models, class_labels = load_models()
+                mini_model, mini_class_labels = load_mini_model()
 
-            st.write("Thresholding Grayscale Image (Threshold=200).")
-            _, binary_img_before_not = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
-            st.image(binary_img_before_not, caption="Binary Image (After Threshold, Before Inversion)", use_container_width=True)
+                expression = ""
+                prev_label = ""
 
-            st.write("Inverting Binary Image.")
-            processed_gray_img = cv2.bitwise_not(binary_img_before_not) # Renamed to avoid confusion
-            st.image(processed_gray_img, caption="Processed Drawing for Detection (Final Black & White)", use_container_width=True)
-            # --- End Detailed Debugging ---
+                for x, y, w, h in sorted_boxes:
+                    if w < 2 or h < 2 or w * h < 10:
+                        continue
 
-            # Use the shared prediction function with the final processed image
-            expression, result_img = predict_expression_from_image(processed_gray_img) # Pass the B&W image
-            st.image(result_img, caption="Detected Boxes (on Original Grayscale)", use_container_width=True)
+                    cropped = binary[y:y + h, x:x + w]
+                    input_img, _ = preprocess_symbol(cropped)
+                    if input_img is None:
+                        continue
 
-            st.markdown(
-                f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
-                unsafe_allow_html=True,
-            )
-            try:
-                result = eval(expression)
+                    predictions = [m.predict(input_img, verbose=0) for m in models]
+                    avg_prediction = np.mean(predictions, axis=0)
+                    confidence = np.max(avg_prediction)
+                    predicted_class = np.argmax(avg_prediction)
+                    predicted_label = class_labels[predicted_class]
+
+                    if predicted_label in mini_class_labels and confidence <= 1.0:
+                        mini_pred = mini_model.predict(input_img, verbose=0)
+                        mini_class = np.argmax(mini_pred)
+                        mini_label = mini_class_labels[mini_class]
+                        if mini_label != predicted_label:
+                            predicted_label = mini_label
+
+                    if confidence < 0.3 or (predicted_label in "+-*/" and prev_label in "+-*/"):
+                        continue
+
+                    expression += predicted_label
+                    prev_label = predicted_label
+
+                # Final cleanup
+                expression = re.sub(r'^[*/+\-]+', '', expression)
+                expression = re.sub(r'[*/+\-]+$', '', expression)
+
                 st.markdown(
-                    f"<h2 style='font-size: 40px; color: green;'>✅ Result: <code>{expression} = {result}</code></h2>",
+                    f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
                     unsafe_allow_html=True,
                 )
-            except Exception as e:
-                st.error("❌ Failed to evaluate expression")
+                try:
+                    result = eval(expression)
+                    st.markdown(
+                        f"<h2 style='font-size: 40px; color: green;'>✅ Result: <code>{expression} = {result}</code></h2>",
+                        unsafe_allow_html=True,
+                    )
+                except Exception as e:
+                    st.error("❌ Failed to evaluate expression")
