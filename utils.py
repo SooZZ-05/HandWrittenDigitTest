@@ -64,7 +64,13 @@ from tensorflow.keras.models import model_from_json
 #     return merged
 
 def merge_contours(contours, x_thresh=15, y_thresh=40):
-    boxes = [cv2.boundingRect(c) for c in contours]
+    boxes = []
+    for c in contours:
+        if c is not None and len(c) > 0:
+            c = np.array(c, dtype=np.int32)
+            rect = cv2.boundingRect(c)
+            boxes.append(rect)
+
     used = [False] * len(boxes)
     merged = []
 
