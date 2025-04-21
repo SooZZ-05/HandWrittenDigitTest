@@ -29,7 +29,7 @@ def predict_expression_from_image(gray_img):
             roi = binary[y:y+h, x:x+w]  # Get the cropped region from binary
 
             projection = np.sum(roi, axis=0)
-            threshold = 0.05 * np.max(projection)
+            threshold = 0.2 * np.max(projection)
 
             split_indices = []
             for i in range(1, len(projection) - 1):
@@ -184,7 +184,7 @@ elif mode == "✍️ Draw on Whiteboard":
                         roi = binary[y:y+h, x:x+w]  # Get the cropped region from binary
             
                         projection = np.sum(roi, axis=0)
-                        threshold = 0.05 * np.max(projection)
+                        threshold = 0.2 * np.max(projection)
             
                         split_indices = []
                         for i in range(1, len(projection) - 1):
