@@ -53,7 +53,7 @@ def predict_expression_from_image(gray_img):
             if mini_label != predicted_label:
                 predicted_label = mini_label
 
-        if confidence < 0.3 or (predicted_label in "+-*/" and prev_label in "+-*/"):
+        if confidence < 0.3 or (predicted_label in "*/" and prev_label in "+-*/"):
             continue
 
         expression += predicted_label
@@ -184,7 +184,7 @@ elif mode == "✍️ Draw on Whiteboard":
                         if mini_label != predicted_label:
                             predicted_label = mini_label
 
-                    if confidence < 0.3 or (predicted_label in "+-*/" and prev_label in "+-*/"):
+                    if confidence < 0.3 or (predicted_label in "*/" and prev_label in "+-*/"):
                         continue
 
                     expression += predicted_label
