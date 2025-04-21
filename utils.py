@@ -5,7 +5,7 @@ from tensorflow.keras.models import model_from_json
 
 import numpy as np
 
-def merge_contours(boxes, y_thresh=30):
+def merge_contours(boxes, x_thresh=10, y_thresh=30):
     merged = []
     used = [False] * len(boxes)
 
