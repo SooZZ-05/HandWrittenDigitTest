@@ -5,7 +5,7 @@ from tensorflow.keras.models import model_from_json
 
 import numpy as np
 
-def merge_contours(boxes, x_thresh=15, y_thresh=40):
+def merge_contours(boxes, x_thresh=15):
     merged = []
     used = [False] * len(boxes)
 
@@ -23,18 +23,12 @@ def merge_contours(boxes, x_thresh=15, y_thresh=40):
 
             x2, y2, w2, h2 = boxes[j]
 
-            # Compute centers
-            cx1, cy1 = x1 + w1 // 2, y1 + h1 // 2
-            cx2, cy2 = x2 + w2 // 2, y2 + h2 // 2
+            # Horizontal range coverage:
+            # Check if box j is fully within the horizontal range of box i, or vice versa
+            i_covers_j = x2 >= x1 and (x2 + w2) <= (x1 + w1)
+            j_covers_i = x1 >= x2 and (x1 + w1) <= (x2 + w2)
 
-            # Horizontal range coverage: check if one box's horizontal range covers the other
-            covers_horizontally = (x2 >= x1 and (x2 + w2) <= (x1 + w1)) or (x1 >= x2 and (x1 + w1) <= (x2 + w2))
-
-            # Vertical closeness: Check if the centers are vertically close within y_thresh
-            vertical_close = abs(cy1 - cy2) < y_thresh
-
-            # If the boxes are horizontally covered and vertically close, merge them
-            if covers_horizontally and vertical_close:
+            if i_covers_j or j_covers_i:
                 group.append((x2, y2, w2, h2))
                 used[j] = True
 
@@ -52,7 +46,6 @@ def merge_contours(boxes, x_thresh=15, y_thresh=40):
         merged.append((merged_x, merged_y, merged_w, merged_h))
 
     return merged
-
 
 
 
