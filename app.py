@@ -60,7 +60,8 @@ def predict_expression_from_image(gray_img):
         prev_label = predicted_label
 
     # Final cleanup
-    expression = re.sub(r'^[*/+\-]+', '', expression)
+    expression = re.sub(r'([*/+\-])([*/])', lambda m: m.group(1) if m.group(2) in '*/' else m.group(0), expression)
+    # expression = re.sub(r'^[*/+\-]+', '', expression)
     expression = re.sub(r'[*/+\-]+$', '', expression)
 
     return expression, img_copy
