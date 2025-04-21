@@ -27,35 +27,14 @@ def merge_contours(boxes, x_thresh=15, y_thresh=40):
             cx1, cy1 = x1 + w1 // 2, y1 + h1 // 2
             cx2, cy2 = x2 + w2 // 2, y2 + h2 // 2
 
-            # Horizontal overlap check
-            horizontal_overlap = (x1 <= x2 + w2 and x2 <= x1 + w1)
-            
-            # Updated horizontal close check: increase threshold for merging touching boxes
-            horizontal_close = abs((x1 + w1) - x2) < x_thresh or abs((x2 + w2) - x1) < x_thresh
+            # Horizontal range coverage: check if one box's horizontal range covers the other
+            covers_horizontally = (x2 >= x1 and (x2 + w2) <= (x1 + w1)) or (x1 >= x2 and (x1 + w1) <= (x2 + w2))
 
-            # Vertical center closeness
+            # Vertical closeness: Check if the centers are vertically close within y_thresh
             vertical_close = abs(cy1 - cy2) < y_thresh
 
-            # --------- Fix for Divide symbol logic ----------
-            # Check if one box is within the horizontal range of the other
-            covers_horizontally = (x2 >= x1 and (x2 + w2) <= (x1 + w1)) or (x1 >= x2 and (x1 + w1) <= (x2 + w2))
-            
-            # Check if the boxes are vertically stacked within threshold
-            stacked_vertically = abs(cy1 - cy2) < y_thresh
-
-            # If a box is vertically stacked and horizontally covers the other, merge them
-            is_divide_candidate = stacked_vertically and covers_horizontally
-            # ---------------------------------------------
-
-            # Merging criteria: Horizontal overlap or closeness + vertical proximity
-            if (horizontal_overlap or horizontal_close) and vertical_close:
-                if w1 > 20 and w2 > 20:
-                    continue  # skip merging wide boxes
-                group.append((x2, y2, w2, h2))
-                used[j] = True
-
-            # If the boxes qualify as a divide symbol (dot + bar + dot)
-            elif is_divide_candidate:
+            # If the boxes are horizontally covered and vertically close, merge them
+            if covers_horizontally and vertical_close:
                 group.append((x2, y2, w2, h2))
                 used[j] = True
 
@@ -73,6 +52,7 @@ def merge_contours(boxes, x_thresh=15, y_thresh=40):
         merged.append((merged_x, merged_y, merged_w, merged_h))
 
     return merged
+
 
 
 
