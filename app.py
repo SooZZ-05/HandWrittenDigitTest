@@ -192,7 +192,7 @@ elif mode == "✍️ Draw on Whiteboard":
                 # Final cleanup
                 expression = re.sub(r'([*/+\-])([*/])', lambda m: m.group(1) if m.group(2) in '*/' else m.group(0), expression)
                 # expression = re.sub(r'^[*/+\-]+', '', expression)
-                # expression = re.sub(r'[*/+\-]+$', '', expression)
+                expression = re.sub(r'[*/+\-]+$', '', expression)
 
                 st.markdown(
                     f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
