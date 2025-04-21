@@ -166,7 +166,7 @@ elif mode == "✍️ Draw on Whiteboard":
         width=600,
         drawing_mode="freedraw",
         key="canvas",
-        update_streamlit=False,  # Disable continuous updates.
+        # update_streamlit=False,
     )
 
     if canvas_result.image_data is not None:
@@ -195,7 +195,22 @@ elif mode == "✍️ Draw on Whiteboard":
                 st.image(alpha_channel, caption="Alpha Channel Only", use_container_width=True)
             st.write("--- End Raw Data Debug ---")
 
-            # Display the raw RGBA data again (as you noted, this appears white)
+        st.write("--- Debug: JSON Data ---")
+        if canvas_result.json_data:
+            st.write("JSON data found:")
+            try: # Use try-except as st.json might fail on complex/large data
+                st.json(canvas_result.json_data)
+            except Exception as e:
+                st.write(f"Could not display JSON data: {e}")
+                st.text(str(canvas_result.json_data)) # Display as text if json fails
+        else:
+            st.write("JSON data is empty.")
+        st.write("--- End JSON Data ---")
+    
+        # Modify the check for processing:
+        if canvas_result.image_data is None or canvas_result.image_data.min() == 255:
+             st.error("Drawing not detected in image data (Image is blank white). Cannot process.")
+        else:
             st.image(canvas_result.image_data, caption="Raw Drawing Data (RGBA)", use_container_width=True)
 
             # --- Check Scaling ---
