@@ -15,15 +15,7 @@ def predict_expression_from_image(gray_img):
     inverted = cv2.bitwise_not(gray_img)
     _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
     
-    # Apply dilation to fuse parts of slash/divide symbol
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))  # Try (2,2) or (3,2)
-    dilated = cv2.dilate(binary, kernel, iterations=1)
-    
-    # Now find contours on dilated image
-    contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    #testingtemporary
-    #contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     bounding_boxes = [cv2.boundingRect(c) for c in contours]
     merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=40)
     sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
@@ -152,15 +144,7 @@ elif mode == "✍️ Draw on Whiteboard":
                 inverted = cv2.bitwise_not(gray_img)
                 _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
 
-                #testing temporary
-                # Apply dilation to fuse parts of slash/divide symbol
-                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))  # Try (2,2) or (3,2)
-                dilated = cv2.dilate(binary, kernel, iterations=1)
-                
-                # Now find contours on dilated image
-                contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-                #contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 bounding_boxes = [cv2.boundingRect(c) for c in contours]
                 merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=40)
                 sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
