@@ -5,7 +5,7 @@ from tensorflow.keras.models import model_from_json
 
 import numpy as np
 
-def merge_contours(boxes, x_thresh=10, y_thresh=30):
+def merge_contours(boxes, x_thresh, y_thresh=40):
     merged = []
     used = [False] * len(boxes)
 
@@ -13,38 +13,52 @@ def merge_contours(boxes, x_thresh=10, y_thresh=30):
         if used[i]:
             continue
 
-        x, y, w, h = boxes[i]
-        x_center = x + w // 2
-        y2 = y + h
+        x1, y1, w1, h1 = boxes[i]
+        x1_right = x1 + w1
+        y1_bottom = y1 + h1
+
+        group = [(x1, y1, w1, h1)]
+        used[i] = True
 
         for j in range(i + 1, len(boxes)):
             if used[j]:
                 continue
 
-            xj, yj, wj, hj = boxes[j]
-            xj_center = xj + wj // 2
-            yj2 = yj + hj
+            x2, y2, w2, h2 = boxes[j]
+            x2_right = x2 + w2
+            y2_bottom = y2 + h2
 
-            # Check only vertical alignment and proximity
-            same_column = abs(x_center - xj_center) < w  # same column roughly
-            close_vertically = abs(y - yj) < y_thresh or abs(y2 - yj) < y_thresh or abs(y - yj2) < y_thresh
+            # Check vertical alignment (stacked)
+            vertically_close = abs(y1_bottom - y2) < y_thresh or abs(y2_bottom - y1) < y_thresh or abs(y1 - y2) < y_thresh
 
-            if same_column and close_vertically:
-                # Merge boxes
-                x_new = min(x, xj)
-                y_new = min(y, yj)
-                x_max = max(x + w, xj + wj)
-                y_max = max(y + h, yj + hj)
+            # Check horizontal containment
+            one_within_other = (
+                (x2 >= x1 and x2_right <= x1_right) or
+                (x1 >= x2 and x1_right <= x2_right)
+            )
 
-                x, y, w, h = x_new, y_new, x_max - x_new, y_max - y_new
+            if vertically_close and one_within_other:
+                group.append((x2, y2, w2, h2))
                 used[j] = True
-                x_center = x + w // 2
-                y2 = y + h
 
-        merged.append((x, y, w, h))
-        used[i] = True
+        # Merge all in the group
+        if len(group) > 1:
+            x_vals = [x for x, _, _, _ in group]
+            y_vals = [y for _, y, _, _ in group]
+            x_rights = [x + w for x, _, w, _ in group]
+            y_bottoms = [y + h for _, y, _, h in group]
+
+            x_min = min(x_vals)
+            y_min = min(y_vals)
+            x_max = max(x_rights)
+            y_max = max(y_bottoms)
+
+            merged.append((x_min, y_min, x_max - x_min, y_max - y_min))
+        else:
+            merged.append((x1, y1, w1, h1))  # just itself
 
     return merged
+
 
 
 # def merge_contours(boxes, x_thresh=15, y_thresh=40):
