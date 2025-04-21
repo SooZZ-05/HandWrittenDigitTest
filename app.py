@@ -13,7 +13,7 @@ from utils import (
 def predict_expression_from_image(gray_img):
     # Invert and binarize
     inverted = cv2.bitwise_not(gray_img)
-    #_, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
+    _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
 
    # Distance transform
     dist = cv2.distanceTransform(inverted, cv2.DIST_L2, 5)
@@ -168,7 +168,7 @@ elif mode == "✍️ Draw on Whiteboard":
 
                 # Apply similar processing steps as the upload image prediction
                 inverted = cv2.bitwise_not(gray_img)
-                #_, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
+                _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
 
                    # Distance transform
                 dist = cv2.distanceTransform(inverted, cv2.DIST_L2, 5)
