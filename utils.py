@@ -15,7 +15,6 @@ def merge_contours(boxes, x_thresh, y_thresh=40):
 
         x1, y1, w1, h1 = boxes[i]
         x1_right = x1 + w1
-        y1_bottom = y1 + h1
 
         group = [(x1, y1, w1, h1)]
         used[i] = True
@@ -26,38 +25,10 @@ def merge_contours(boxes, x_thresh, y_thresh=40):
 
             x2, y2, w2, h2 = boxes[j]
             x2_right = x2 + w2
-            y2_bottom = y2 + h2
 
-            # Check vertical alignment (stacked)
-            vertically_close = abs(y1_bottom - y2) < y_thresh or abs(y2_bottom - y1) < y_thresh or abs(y1 - y2) < y_thresh
-
-            # Check horizontal containment
-            one_within_other = (
-                (x2 >= x1 and x2_right <= x1_right) or
-                (x1 >= x2 and x1_right <= x2_right)
-            )
-
-            if vertically_close and one_within_other:
-                group.append((x2, y2, w2, h2))
-                used[j] = True
-
-        # Merge all in the group
-        if len(group) > 1:
-            x_vals = [x for x, _, _, _ in group]
-            y_vals = [y for _, y, _, _ in group]
-            x_rights = [x + w for x, _, w, _ in group]
-            y_bottoms = [y + h for _, y, _, h in group]
-
-            x_min = min(x_vals)
-            y_min = min(y_vals)
-            x_max = max(x_rights)
-            y_max = max(y_bottoms)
-
-            merged.append((x_min, y_min, x_max - x_min, y_max - y_min))
-        else:
-            merged.append((x1, y1, w1, h1))  # just itself
-
-    return merged
+            # Check if x-range of one box is fully within the other
+            box_j_within_i = x2 >= x1 and x2_right <= x1_right
+            box_i_within_j = x1 >= x_
 
 
 
