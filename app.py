@@ -14,8 +14,15 @@ def predict_expression_from_image(gray_img):
     # Invert and binarize
     inverted = cv2.bitwise_not(gray_img)
     _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
+
+    # Assuming 'binary' is your thresholded image
+    kernel = np.ones((3, 3), np.uint8)
     
-    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Apply dilation and erosion to separate touching contours
+    dilated_image = cv2.dilate(binary, kernel, iterations=1)  # Expands contours
+    eroded_image = cv2.erode(dilated_image, kernel, iterations=1)
+    
+    contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     bounding_boxes = [cv2.boundingRect(c) for c in contours]
     merged_once = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
     merged_boxes = merge_contours(merged_once, x_thresh=15, y_thresh=0)
@@ -146,7 +153,14 @@ elif mode == "✍️ Draw on Whiteboard":
                 inverted = cv2.bitwise_not(gray_img)
                 _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
 
-                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                # Assuming 'binary' is your thresholded image
+                kernel = np.ones((3, 3), np.uint8)
+                
+                # Apply dilation and erosion to separate touching contours
+                dilated_image = cv2.dilate(binary, kernel, iterations=1)  # Expands contours
+                eroded_image = cv2.erode(dilated_image, kernel, iterations=1)
+                
+                contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 bounding_boxes = [cv2.boundingRect(c) for c in contours]
                 merged_once = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
                 merged_boxes = merge_contours(merged_once, x_thresh=15, y_thresh=0)
