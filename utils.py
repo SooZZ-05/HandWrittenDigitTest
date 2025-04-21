@@ -28,8 +28,30 @@ def merge_contours(boxes, x_thresh, y_thresh=40):
 
             # Check if x-range of one box is fully within the other
             box_j_within_i = x2 >= x1 and x2_right <= x1_right
-            box_i_within_j = x1 >= x_
+            box_i_within_j = x1 >= x2 and x1_right <= x2_right
+            x_close = abs(x1 - x2) < x_thresh  # still keep this as a soft fallback
 
+            if box_j_within_i or box_i_within_j or x_close:
+                group.append((x2, y2, w2, h2))
+                used[j] = True
+
+        # Merge group into one bounding box
+        if len(group) > 1:
+            x_vals = [x for x, _, _, _ in group]
+            y_vals = [y for _, y, _, _ in group]
+            x_rights = [x + w for x, _, w, _ in group]
+            y_bottoms = [y + h for _, y, _, h in group]
+
+            x_min = min(x_vals)
+            y_min = min(y_vals)
+            x_max = max(x_rights)
+            y_max = max(y_bottoms)
+
+            merged.append((x_min, y_min, x_max - x_min, y_max - y_min))
+        else:
+            merged.append((x1, y1, w1, h1))
+
+    return merged
 
 
 # def merge_contours(boxes, x_thresh=15, y_thresh=40):
