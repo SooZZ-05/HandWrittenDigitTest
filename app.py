@@ -16,10 +16,10 @@ def predict_expression_from_image(gray_img):
     _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
 
     # Assuming 'binary' is your thresholded image
-    kernel = np.ones((4, 4), np.uint8)
+    kernel = np.ones((3, 3), np.uint8)
     
     # Apply dilation and erosion to separate touching contours
-    dilated_image = cv2.dilate(binary, kernel, iterations=1)  # Expands contours
+    dilated_image = cv2.dilate(binary, kernel, iterations=5)  # Expands contours
     eroded_image = cv2.erode(dilated_image, kernel, iterations=1)
     
     contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -154,10 +154,10 @@ elif mode == "✍️ Draw on Whiteboard":
                 _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
 
                 # Assuming 'binary' is your thresholded image
-                kernel = np.ones((4, 4), np.uint8)
+                kernel = np.ones((3, 3), np.uint8)
                 
                 # Apply dilation and erosion to separate touching contours
-                dilated_image = cv2.dilate(binary, kernel, iterations=1)  # Expands contours
+                dilated_image = cv2.dilate(binary, kernel, iterations=5)  # Expands contours
                 eroded_image = cv2.erode(dilated_image, kernel, iterations=1)
                 
                 contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
