@@ -5,6 +5,17 @@ from tensorflow.keras.models import model_from_json
 
 import numpy as np
 
+def merge_until_stable(boxes, x_thresh=15, y_thresh=0):
+    prev_len = -1
+    curr_boxes = boxes
+
+    while prev_len != len(curr_boxes):
+        prev_len = len(curr_boxes)
+        curr_boxes = merge_contours(curr_boxes, x_thresh, y_thresh)
+
+    return curr_boxes
+
+
 def merge_contours(boxes, x_thresh=15, y_thresh=0):
     merged = []
     used = [False] * len(boxes)
