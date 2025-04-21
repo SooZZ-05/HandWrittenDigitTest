@@ -17,22 +17,29 @@ def merge_contours(boxes, x_thresh=15, y_thresh=0):
         group = [(x1, y1, w1, h1)]
         used[i] = True
 
-        for j in range(i + 1, len(boxes)):
-            if used[j]:
-                continue
+        changed = True
+        while changed:
+            changed = False
+            new_group = []
 
-            x2, y2, w2, h2 = boxes[j]
+            for j in range(len(boxes)):
+                if used[j]:
+                    continue
 
-            # Horizontal range coverage:
-            # Check if box j is fully within the horizontal range of box i, or vice versa
-            i_covers_j = x2 >= x1 and (x2 + w2) <= (x1 + w1)
-            j_covers_i = x1 >= x2 and (x1 + w1) <= (x2 + w2)
+                x2, y2, w2, h2 = boxes[j]
+                cx2 = x2 + w2 // 2
 
-            if i_covers_j or j_covers_i:
-                group.append((x2, y2, w2, h2))
-                used[j] = True
+                for gx, gy, gw, gh in group:
+                    # Check if x2-range is fully within any group member’s x-range
+                    if gx <= x2 and (x2 + w2) <= (gx + gw):
+                        new_group.append((x2, y2, w2, h2))
+                        used[j] = True
+                        changed = True
+                        break  # stop checking this box against others
 
-        # Merge grouped boxes into one bounding box
+            group.extend(new_group)
+
+        # Merge grouped boxes
         x_coords = [b[0] for b in group]
         y_coords = [b[1] for b in group]
         x_ends = [b[0] + b[2] for b in group]
