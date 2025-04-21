@@ -178,37 +178,70 @@ elif mode == "✍️ Draw on Whiteboard":
         if canvas_result.image_data is None:
             st.warning("No drawing detected.")
         else:
+            # --- Start Detailed Debugging ---
+            st.write("--- Debug: Raw Image Data ---")
+            st.write(f"Shape: {canvas_result.image_data.shape}")
+            st.write(f"Data type: {canvas_result.image_data.dtype}")
+            st.write(f"Min value: {canvas_result.image_data.min()}")
+            st.write(f"Max value: {canvas_result.image_data.max()}")
+
+            if canvas_result.image_data.shape[2] == 4:
+                alpha_channel = canvas_result.image_data[:, :, 3]
+                st.write(f"Alpha channel Min: {alpha_channel.min()}")
+                st.write(f"Alpha channel Max: {alpha_channel.max()}")
+                # Check if *any* pixel is opaque or semi-opaque
+                st.write(f"Number of pixels with Alpha > 0: {np.sum(alpha_channel > 0)}")
+                # Display Alpha channel itself (should show your drawing in white/gray on black)
+                st.image(alpha_channel, caption="Alpha Channel Only", use_container_width=True)
+            st.write("--- End Raw Data Debug ---")
+
+            # Display the raw RGBA data again (as you noted, this appears white)
             st.image(canvas_result.image_data, caption="Raw Drawing Data (RGBA)", use_container_width=True)
-            
-            # If the image data is in 0-1 range, convert it; otherwise, use as is.
+
+            # --- Check Scaling ---
             if canvas_result.image_data.max() <= 1:
+                st.write("Scaling image data from 0-1 to 0-255 range.")
                 rgba_image = (canvas_result.image_data * 255).astype(np.uint8)
             else:
+                st.write("Using image data in 0-255 range (or other) directly.")
                 rgba_image = canvas_result.image_data.copy()
 
-            st.image(rgba_image, caption="🎨 Original RGBA from Canvas", use_container_width=True)
-            
-            # Blend alpha onto white background (if the image has an alpha channel).
+            # Display after potential scaling
+            st.image(rgba_image, caption="🎨 RGBA After Scaling Check", use_container_width=True)
+
+            # --- Check Blending ---
             if rgba_image.shape[2] == 4:
+                st.write("Blending RGBA onto white background.")
                 alpha = rgba_image[:, :, 3] / 255.0
+                # Display normalized alpha again if needed
+                # st.image(alpha, caption="Normalized Alpha for Blending", use_container_width=True)
                 white_bg = np.ones_like(rgba_image[:, :, :3], dtype=np.uint8) * 255
                 blended_image = (alpha[..., None] * rgba_image[:, :, :3] + (1 - alpha[..., None]) * white_bg).astype(np.uint8)
             else:
+                st.write("Image is not RGBA, skipping blending.")
                 blended_image = rgba_image.copy()
+
+            # Display the result of blending
             st.image(blended_image, caption="🧾 Blended Image (RGB)", use_container_width=True)
 
-            # Convert to grayscale.
+            # --- Check Grayscale and Thresholding ---
+            st.write("Converting to Grayscale.")
             gray_img = cv2.cvtColor(blended_image, cv2.COLOR_RGB2GRAY)
-            st.image(gray_img, caption="🧊 Grayscale Image", use_container_width=True)
+            st.write(f"Grayscale Min: {gray_img.min()}, Max: {gray_img.max()}")
+            st.image(gray_img, caption="🧊 Grayscale Image (Before Threshold)", use_container_width=True)
 
-            # Binarize and invert to make strokes clearer.
-            _, gray_img = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
-            gray_img = cv2.bitwise_not(gray_img)
-            st.image(gray_img, caption="Processed Drawing for Detection", use_container_width=True)
-            
-            # Use the shared prediction function.
-            expression, result_img = predict_expression_from_image(gray_img)
-            st.image(result_img, caption="Detected Boxes", use_container_width=True)
+            st.write("Thresholding Grayscale Image (Threshold=200).")
+            _, binary_img_before_not = cv2.threshold(gray_img, 200, 255, cv2.THRESH_BINARY)
+            st.image(binary_img_before_not, caption="Binary Image (After Threshold, Before Inversion)", use_container_width=True)
+
+            st.write("Inverting Binary Image.")
+            processed_gray_img = cv2.bitwise_not(binary_img_before_not) # Renamed to avoid confusion
+            st.image(processed_gray_img, caption="Processed Drawing for Detection (Final Black & White)", use_container_width=True)
+            # --- End Detailed Debugging ---
+
+            # Use the shared prediction function with the final processed image
+            expression, result_img = predict_expression_from_image(processed_gray_img) # Pass the B&W image
+            st.image(result_img, caption="Detected Boxes (on Original Grayscale)", use_container_width=True)
 
             st.markdown(
                 f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
