@@ -14,31 +14,7 @@ def predict_expression_from_image(gray_img):
     # Invert and binarize
     inverted = cv2.bitwise_not(gray_img)
     _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
-
-   # Distance transform
-    dist = cv2.distanceTransform(inverted, cv2.DIST_L2, 5)
-    _, sure_fg = cv2.threshold(dist, 0.4 * dist.max(), 255, 0)
-    
-    # Convert to uint8
-    sure_fg = np.uint8(sure_fg)
-    
-    # Find unknown region
-    sure_bg = cv2.dilate(inverted, np.ones((3, 3), np.uint8), iterations=1)
-    unknown = cv2.subtract(sure_bg, sure_fg)
-    
-    # Connected components as markers
-    _, markers = cv2.connectedComponents(sure_fg)
-    markers = markers + 1
-    markers[unknown == 255] = 0
-    
-    # Convert original to color for watershed
-    color = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
-    cv2.watershed(color, markers)
-    
-    # Extract contours from markers
-    markers[markers == -1] = 0
-    markers = np.uint8(markers)
-    contours, _ = cv2.findContours(markers, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     bounding_boxes = [cv2.boundingRect(c) for c in contours]
     merged_once = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
@@ -169,31 +145,7 @@ elif mode == "✍️ Draw on Whiteboard":
                 # Apply similar processing steps as the upload image prediction
                 inverted = cv2.bitwise_not(gray_img)
                 _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
-
-                   # Distance transform
-                dist = cv2.distanceTransform(inverted, cv2.DIST_L2, 5)
-                _, sure_fg = cv2.threshold(dist, 0.4 * dist.max(), 255, 0)
-                
-                # Convert to uint8
-                sure_fg = np.uint8(sure_fg)
-                
-                # Find unknown region
-                sure_bg = cv2.dilate(inverted, np.ones((3, 3), np.uint8), iterations=1)
-                unknown = cv2.subtract(sure_bg, sure_fg)
-                
-                # Connected components as markers
-                _, markers = cv2.connectedComponents(sure_fg)
-                markers = markers + 1
-                markers[unknown == 255] = 0
-                
-                # Convert original to color for watershed
-                color = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
-                cv2.watershed(color, markers)
-                
-                # Extract contours from markers
-                markers[markers == -1] = 0
-                markers = np.uint8(markers)
-                contours, _ = cv2.findContours(markers, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 bounding_boxes = [cv2.boundingRect(c) for c in contours]
                 merged_once = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
                 merged_boxes = merge_contours(merged_once, x_thresh=15, y_thresh=0)
