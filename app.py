@@ -16,7 +16,7 @@ def predict_expression_from_image(gray_img):
     _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
 
     # Assuming 'binary' is your thresholded image
-    kernel = np.ones((3, 3), np.uint8)
+    kernel = np.ones((4, 4), np.uint8)
     
     # Apply dilation and erosion to separate touching contours
     dilated_image = cv2.dilate(binary, kernel, iterations=1)  # Expands contours
