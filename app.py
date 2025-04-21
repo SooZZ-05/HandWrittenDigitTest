@@ -17,7 +17,8 @@ def predict_expression_from_image(gray_img):
     
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     bounding_boxes = [cv2.boundingRect(c) for c in contours]
-    merged_boxes = merge_until_stable(bounding_boxes, x_thresh=15, y_thresh=0)
+    merged_once = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
+    merged_boxes = merge_contours(merged_once, x_thresh=15, y_thresh=0)
     # merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
     sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
 
@@ -147,7 +148,8 @@ elif mode == "✍️ Draw on Whiteboard":
 
                 contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 bounding_boxes = [cv2.boundingRect(c) for c in contours]
-                merged_boxes = merge_until_stable(bounding_boxes, x_thresh=15, y_thresh=0)
+                merged_once = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
+                merged_boxes = merge_contours(merged_once, x_thresh=15, y_thresh=0)
                 # merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
                 sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
 
