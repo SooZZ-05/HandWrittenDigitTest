@@ -19,8 +19,8 @@ def predict_expression_from_image(gray_img):
     kernel = np.ones((3, 3), np.uint8)
     
     # Apply dilation and erosion to separate touching contours
-    dilated_image = cv2.dilate(binary, kernel, iterations=10)  # Expands contours
-    eroded_image = cv2.erode(dilated_image, kernel, iterations=1)
+    dilated_image = cv2.dilate(binary, kernel, iterations=1)  # Expands contours
+    eroded_image = cv2.erode(dilated_image, kernel, iterations=10)
     
     contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     bounding_boxes = [cv2.boundingRect(c) for c in contours]
@@ -157,8 +157,8 @@ elif mode == "✍️ Draw on Whiteboard":
                 kernel = np.ones((3, 3), np.uint8)
                 
                 # Apply dilation and erosion to separate touching contours
-                dilated_image = cv2.dilate(binary, kernel, iterations=10)  # Expands contours
-                eroded_image = cv2.erode(dilated_image, kernel, iterations=1)
+                dilated_image = cv2.dilate(binary, kernel, iterations=1)  # Expands contours
+                eroded_image = cv2.erode(dilated_image, kernel, iterations=10)
                 
                 contours, _ = cv2.findContours(eroded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 bounding_boxes = [cv2.boundingRect(c) for c in contours]
