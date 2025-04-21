@@ -5,7 +5,7 @@ from tensorflow.keras.models import model_from_json
 
 import numpy as np
 
-def merge_contours(boxes, x_thresh, y_thresh=40):
+def merge_contours(boxes, x_thresh=15, y_thresh=40):
     merged = []
     used = [False] * len(boxes)
 
@@ -14,8 +14,6 @@ def merge_contours(boxes, x_thresh, y_thresh=40):
             continue
 
         x1, y1, w1, h1 = boxes[i]
-        x1_right = x1 + w1
-
         group = [(x1, y1, w1, h1)]
         used[i] = True
 
@@ -24,34 +22,52 @@ def merge_contours(boxes, x_thresh, y_thresh=40):
                 continue
 
             x2, y2, w2, h2 = boxes[j]
-            x2_right = x2 + w2
 
-            # Check if x-range of one box is fully within the other
-            box_j_within_i = x2 >= x1 and x2_right <= x1_right
-            box_i_within_j = x1 >= x2 and x1_right <= x2_right
-            x_close = abs(x1 - x2) < x_thresh  # still keep this as a soft fallback
+            # Compute centers
+            cx1, cy1 = x1 + w1 // 2, y1 + h1 // 2
+            cx2, cy2 = x2 + w2 // 2, y2 + h2 // 2
 
-            if box_j_within_i or box_i_within_j or x_close:
+            # Horizontal overlap check
+            horizontal_overlap = (x1 <= x2 + w2 and x2 <= x1 + w1)
+            horizontal_close = abs((x1 + w1) - x2) < x_thresh or abs((x2 + w2) - x1) < x_thresh
+
+            # Vertical center closeness
+            vertical_close = abs(cy1 - cy2) < y_thresh
+
+            # --------- NEW: Divide symbol logic ----------
+            both_narrow = w1 < 20 and w2 < 20
+            stacked_vertically = abs(cx1 - cx2) < 10 and (abs((y1 + h1) - y2) < y_thresh or abs((y2 + h2) - y1) < y_thresh)
+            is_divide_candidate = both_narrow and stacked_vertically
+            # ---------------------------------------------
+
+            # Merge if the horizontal overlap or closeness condition is met
+            if (horizontal_overlap or horizontal_close) and vertical_close:
+                if w1 > 20 and w2 > 20:
+                    continue  # Skip merging wide boxes (optional, adjust logic if needed)
                 group.append((x2, y2, w2, h2))
                 used[j] = True
 
-        # Merge group into one bounding box
-        if len(group) > 1:
-            x_vals = [x for x, _, _, _ in group]
-            y_vals = [y for _, y, _, _ in group]
-            x_rights = [x + w for x, _, w, _ in group]
-            y_bottoms = [y + h for _, y, _, h in group]
+            # Check for divide-like symbols (narrow components stacked vertically)
+            elif is_divide_candidate:
+                group.append((x2, y2, w2, h2))
+                used[j] = True
 
-            x_min = min(x_vals)
-            y_min = min(y_vals)
-            x_max = max(x_rights)
-            y_max = max(y_bottoms)
+        # Merge grouped boxes
+        x_coords = [b[0] for b in group]
+        y_coords = [b[1] for b in group]
+        x_ends = [b[0] + b[2] for b in group]
+        y_ends = [b[1] + b[3] for b in group]
 
-            merged.append((x_min, y_min, x_max - x_min, y_max - y_min))
-        else:
-            merged.append((x1, y1, w1, h1))
+        # Calculate the bounding box of the merged group
+        merged_x = min(x_coords)
+        merged_y = min(y_coords)
+        merged_w = max(x_ends) - merged_x
+        merged_h = max(y_ends) - merged_y
+
+        merged.append((merged_x, merged_y, merged_w, merged_h))
 
     return merged
+
 
 
 # def merge_contours(boxes, x_thresh=15, y_thresh=40):
