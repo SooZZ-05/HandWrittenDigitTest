@@ -41,7 +41,7 @@ def merge_contours(boxes, x_thresh=15, y_thresh=40):
             x2_center = x2 + w2 // 2
 
             # Condition 1: Box j's horizontal range is inside box i's range
-            horizontal_contained = (x2_left >= x1_left and x2_right <= x1_right)
+            horizontal_contained = (x2_left >= x1_left and x2_right <= x1_right) or (x1_left >= x2_left and x1_right <= x2_right)
 
             # Condition 2: Box j's center is within box i's horizontal range
             center_inside = (x2_center >= x1_left and x2_center <= x1_right)
