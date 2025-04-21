@@ -170,11 +170,10 @@ elif mode == "✍️ Draw on Whiteboard":
     )
     
     if st.button("Recognize Equation"):
-        if canvas_result.image_data is None:
-            st.error("No drawing data found. Please draw your equation and try again.")
+        if canvas_result.image_data is not None:
+            st.warning("No drawing detected.")
         else:
-            # Debug prints to check the data.
-            st.image(canvas_result, caption="drawing result", use_container_width=True)
+            st.image(canvas_result.image_data, caption="Raw Drawing Data (RGBA)", use_container_width=True)
             
             # If the image data is in 0-1 range, convert it; otherwise, use as is.
             if canvas_result.image_data.max() <= 1:
