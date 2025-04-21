@@ -16,51 +16,7 @@ def merge_until_stable(boxes, x_thresh=15, y_thresh=0):
     return curr_boxes
 
 
-# def merge_contours(boxes, x_thresh=15, y_thresh=0):
-#     merged = []
-#     used = [False] * len(boxes)
-
-#     for i in range(len(boxes)):
-#         if used[i]:
-#             continue
-
-#         x1, y1, w1, h1 = boxes[i]
-#         group = [(x1, y1, w1, h1)]
-#         used[i] = True
-
-#         for j in range(len(boxes)):
-#             if i == j or used[j]:
-#                 continue
-
-#             x2, y2, w2, h2 = boxes[j]
-
-#             # Horizontal containment check
-#             a_left, a_right = x1, x1 + w1
-#             b_left, b_right = x2, x2 + w2
-
-#             # If box j is fully inside the horizontal range of box i
-#             if a_left <= b_left and b_right <= a_right:
-#                 group.append((x2, y2, w2, h2))
-#                 used[j] = True
-
-#         # Merge group into one box
-#         x_coords = [b[0] for b in group]
-#         y_coords = [b[1] for b in group]
-#         x_ends = [b[0] + b[2] for b in group]
-#         y_ends = [b[1] + b[3] for b in group]
-
-#         merged_x = min(x_coords)
-#         merged_y = min(y_coords)
-#         merged_w = max(x_ends) - merged_x
-#         merged_h = max(y_ends) - merged_y
-
-#         merged.append((merged_x, merged_y, merged_w, merged_h))
-
-#     return merged
-
-
-
-def merge_contours(boxes, x_thresh=15, y_thresh=0):
+def merge_contours(boxes, x_thresh=15, y_thresh=40):
     merged = []
     used = [False] * len(boxes)
 
@@ -72,36 +28,25 @@ def merge_contours(boxes, x_thresh=15, y_thresh=0):
         group = [(x1, y1, w1, h1)]
         used[i] = True
 
-        for j in range(i + 1, len(boxes)):
-            if used[j]:
+        x1_left = x1
+        x1_right = x1 + w1
+
+        for j in range(len(boxes)):
+            if used[j] or i == j:
                 continue
 
             x2, y2, w2, h2 = boxes[j]
+            x2_left = x2
+            x2_right = x2 + w2
+            x2_center = x2 + w2 // 2
 
-            # Compute centers
-            cx1, cy1 = x1 + w1 // 2, y1 + h1 // 2
-            cx2, cy2 = x2 + w2 // 2, y2 + h2 // 2
+            # Condition 1: Box j's horizontal range is inside box i's range
+            horizontal_contained = (x2_left >= x1_left and x2_right <= x1_right)
 
-            # Horizontal overlap check
-            horizontal_overlap = (x1 <= x2 + w2 and x2 <= x1 + w1)
-            horizontal_close = abs((x1 + w1) - x2) < x_thresh or abs((x2 + w2) - x1) < x_thresh
+            # Condition 2: Box j's center is within box i's horizontal range
+            center_inside = (x2_center >= x1_left and x2_center <= x1_right)
 
-            # Vertical center closeness
-            vertical_close = abs(cy1 - cy2) < y_thresh
-
-            # --------- NEW: Divide symbol logic ----------
-            both_narrow = w1 < 20 and w2 < 20
-            stacked_vertically = abs(cx1 - cx2) < 10 and (abs((y1 + h1) - y2) < y_thresh or abs((y2 + h2) - y1) < y_thresh)
-            is_divide_candidate = both_narrow and stacked_vertically
-            # ---------------------------------------------
-
-            if (horizontal_overlap or horizontal_close) and vertical_close:
-                if w1 > 20 and w2 > 20:
-                    continue  # skip merging wide boxes
-                group.append((x2, y2, w2, h2))
-                used[j] = True
-
-            elif is_divide_candidate:
+            if horizontal_contained or center_inside:
                 group.append((x2, y2, w2, h2))
                 used[j] = True
 
@@ -119,6 +64,68 @@ def merge_contours(boxes, x_thresh=15, y_thresh=0):
         merged.append((merged_x, merged_y, merged_w, merged_h))
 
     return merged
+
+
+
+# def merge_contours(boxes, x_thresh=15, y_thresh=0):
+#     merged = []
+#     used = [False] * len(boxes)
+
+#     for i in range(len(boxes)):
+#         if used[i]:
+#             continue
+
+#         x1, y1, w1, h1 = boxes[i]
+#         group = [(x1, y1, w1, h1)]
+#         used[i] = True
+
+#         for j in range(i + 1, len(boxes)):
+#             if used[j]:
+#                 continue
+
+#             x2, y2, w2, h2 = boxes[j]
+
+#             # Compute centers
+#             cx1, cy1 = x1 + w1 // 2, y1 + h1 // 2
+#             cx2, cy2 = x2 + w2 // 2, y2 + h2 // 2
+
+#             # Horizontal overlap check
+#             horizontal_overlap = (x1 <= x2 + w2 and x2 <= x1 + w1)
+#             horizontal_close = abs((x1 + w1) - x2) < x_thresh or abs((x2 + w2) - x1) < x_thresh
+
+#             # Vertical center closeness
+#             vertical_close = abs(cy1 - cy2) < y_thresh
+
+#             # --------- NEW: Divide symbol logic ----------
+#             both_narrow = w1 < 20 and w2 < 20
+#             stacked_vertically = abs(cx1 - cx2) < 10 and (abs((y1 + h1) - y2) < y_thresh or abs((y2 + h2) - y1) < y_thresh)
+#             is_divide_candidate = both_narrow and stacked_vertically
+#             # ---------------------------------------------
+
+#             if (horizontal_overlap or horizontal_close) and vertical_close:
+#                 if w1 > 20 and w2 > 20:
+#                     continue  # skip merging wide boxes
+#                 group.append((x2, y2, w2, h2))
+#                 used[j] = True
+
+#             elif is_divide_candidate:
+#                 group.append((x2, y2, w2, h2))
+#                 used[j] = True
+
+#         # Merge grouped boxes
+#         x_coords = [b[0] for b in group]
+#         y_coords = [b[1] for b in group]
+#         x_ends = [b[0] + b[2] for b in group]
+#         y_ends = [b[1] + b[3] for b in group]
+
+#         merged_x = min(x_coords)
+#         merged_y = min(y_coords)
+#         merged_w = max(x_ends) - merged_x
+#         merged_h = max(y_ends) - merged_y
+
+#         merged.append((merged_x, merged_y, merged_w, merged_h))
+
+#     return merged
 
 def preprocess_symbol(cropped):
     h, w = cropped.shape[:2]
