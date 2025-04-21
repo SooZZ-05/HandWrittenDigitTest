@@ -25,7 +25,7 @@ def predict_expression_from_image(gray_img):
     for x, y, w, h in sorted_boxes:
         aspect_ratio = w / float(h)
 
-        if aspect_ratio > 1:  # Possibly two characters merged together
+        if aspect_ratio > 0.8:  # Possibly two characters merged together
             roi = binary[y:y+h, x:x+w]  # Get the cropped region from binary
 
             projection = np.sum(roi, axis=0)
@@ -180,7 +180,7 @@ elif mode == "✍️ Draw on Whiteboard":
                 for x, y, w, h in sorted_boxes:
                     aspect_ratio = w / float(h)
             
-                    if aspect_ratio > 1:  # Possibly two characters merged together
+                    if aspect_ratio > 0.8:  # Possibly two characters merged together
                         roi = binary[y:y+h, x:x+w]  # Get the cropped region from binary
             
                         projection = np.sum(roi, axis=0)
