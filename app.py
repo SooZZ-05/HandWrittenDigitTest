@@ -168,9 +168,14 @@ elif mode == "✍️ Draw on Whiteboard":
         key="canvas",
         update_streamlit=False,  # Disable continuous updates.
     )
+
+    if canvas_result.image_data is not None:
+       st.sidebar.success("Drawing detected in canvas state.")
+    else:
+       st.sidebar.warning("No drawing in canvas state.")
     
     if st.button("Recognize Equation"):
-        if canvas_result.image_data is not None:
+        if canvas_result.image_data is None:
             st.warning("No drawing detected.")
         else:
             st.image(canvas_result.image_data, caption="Raw Drawing Data (RGBA)", use_container_width=True)
