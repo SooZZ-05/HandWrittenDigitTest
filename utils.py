@@ -3,44 +3,6 @@ import numpy as np
 import os
 from tensorflow.keras.models import model_from_json
 
-def get_contours(img):
-    # Step 1: Preprocessing
-    if len(img.shape) == 3:
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    else:
-        gray = img.copy()
-
-    blur = cv2.GaussianBlur(gray, (3, 3), 0)
-    thresh = cv2.adaptiveThreshold(
-        blur, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV,
-        11, 2
-    )
-
-    # Step 2: Morphological Transformations
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-
-    dilated = cv2.dilate(thresh, kernel, iterations=1)
-    processed = cv2.erode(dilated, kernel, iterations=1)
-
-    # Step 3: Contour Detection
-    contours, _ = cv2.findContours(processed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Step 4: Bounding Boxes
-    boxes = []
-    for c in contours:
-        if c is not None and len(c) > 0:
-            c = np.array(c, dtype=np.int32)
-            if c.shape[0] >= 1:
-                x, y, w, h = cv2.boundingRect(c)
-                if w > 1 and h > 1:  # Ignore noise
-                    boxes.append((x, y, w, h))
-
-    boxes = sorted(boxes, key=lambda b: b[0])  # sort left to right
-    return boxes, processed
-
-
 def merge_contours(boxes, x_thresh=15, y_thresh=40):
     merged = []
     used = [False] * len(boxes)
