@@ -15,31 +15,25 @@ def merge_contours(boxes, x_thresh=15, y_thresh=0):
 
         x1, y1, w1, h1 = boxes[i]
         group = [(x1, y1, w1, h1)]
+        queue = [(x1, y1, w1, h1)]
         used[i] = True
 
-        changed = True
-        while changed:
-            changed = False
-            new_group = []
+        while queue:
+            gx, gy, gw, gh = queue.pop(0)
 
             for j in range(len(boxes)):
                 if used[j]:
                     continue
 
                 x2, y2, w2, h2 = boxes[j]
-                cx2 = x2 + w2 // 2
 
-                for gx, gy, gw, gh in group:
-                    # Check if x2-range is fully within any group member’s x-range
-                    if gx <= x2 and (x2 + w2) <= (gx + gw):
-                        new_group.append((x2, y2, w2, h2))
-                        used[j] = True
-                        changed = True
-                        break  # stop checking this box against others
+                # Check if box[j] is fully within the horizontal range of current group member
+                if gx <= x2 and (x2 + w2) <= (gx + gw):
+                    group.append((x2, y2, w2, h2))
+                    queue.append((x2, y2, w2, h2))
+                    used[j] = True
 
-            group.extend(new_group)
-
-        # Merge grouped boxes
+        # Merge all grouped boxes
         x_coords = [b[0] for b in group]
         y_coords = [b[1] for b in group]
         x_ends = [b[0] + b[2] for b in group]
@@ -53,6 +47,7 @@ def merge_contours(boxes, x_thresh=15, y_thresh=0):
         merged.append((merged_x, merged_y, merged_w, merged_h))
 
     return merged
+
 
 
 
