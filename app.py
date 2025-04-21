@@ -7,7 +7,7 @@ from tensorflow.keras.models import model_from_json
 
 from utils import (
     merge_contours, preprocess_symbol, make_square, 
-    load_models, load_mini_model
+    load_models, load_mini_model, merge_until_stable
 )
 
 def predict_expression_from_image(gray_img):
@@ -17,8 +17,8 @@ def predict_expression_from_image(gray_img):
     
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     bounding_boxes = [cv2.boundingRect(c) for c in contours]
-    bounding_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
-    merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
+    merged_boxes = merge_until_stable(bounding_boxes, x_thresh=15, y_thresh=0)
+    # merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
     sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
 
     img_copy = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2BGR)
@@ -147,8 +147,8 @@ elif mode == "✍️ Draw on Whiteboard":
 
                 contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 bounding_boxes = [cv2.boundingRect(c) for c in contours]
-                bounding_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
-                merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
+                merged_boxes = merge_until_stable(bounding_boxes, x_thresh=15, y_thresh=0)
+                # merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
                 sorted_boxes = sorted(merged_boxes, key=lambda b: b[0])
 
                 img_copy = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2BGR)
