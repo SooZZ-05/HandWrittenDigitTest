@@ -7,7 +7,7 @@ from tensorflow.keras.models import model_from_json
 
 from utils import (
     merge_contours, preprocess_symbol, make_square, 
-    load_models, load_mini_model
+    load_models, load_mini_model, get_contours
 )
 
 def predict_expression_from_image(gray_img):
