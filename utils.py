@@ -188,3 +188,21 @@ def load_mini_model():
     mini_model.load_weights("models/MiniCNN_127.weights.h5")
     mini_class_labels = ['1', '2', '7']
     return mini_model, mini_class_labels
+
+def check_expression(expression):
+    validEquation = True
+    # Pattern to match three consecutive operators
+    threeConsecutive = r'([*/+\-])([*/+\-])([*/+\-])'
+    invalidDuo = r'([*/+\-])([*/])'
+    invalidStart = r'^([*/]|[+\-*/]{2})'
+    invalidEnd = r'[*/+\-]$'
+    # Search for the pattern in the expression
+    if re.search(threeConsecutive, expression):
+        validEquation = False
+    if re.search(invalidDuo, expression):
+        validEquation = False
+    if re.search(invalidStart, expression):
+        validEquation = False
+    if re.search(invalidEnd, expression):
+        validEquation = False
+    return validEquation
