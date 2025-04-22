@@ -53,16 +53,16 @@ def predict_expression_from_image(gray_img):
             if mini_label != predicted_label:
                 predicted_label = mini_label
 
-        if confidence < 0.3 or (predicted_label in "*/" and prev_label in "+-*/"):
+        if confidence < 0.3:# or (predicted_label in "*/" and prev_label in "+-*/"):
             continue
 
         expression += predicted_label
         prev_label = predicted_label
 
-    # Final cleanup
-    expression = re.sub(r'([*/+\-])([*/])', lambda m: m.group(1) if m.group(2) in '*/' else m.group(0), expression)
-    # expression = re.sub(r'^[*/+\-]+', '', expression)
-    expression = re.sub(r'[*/+\-]+$', '', expression)
+    # # Final cleanup
+    # expression = re.sub(r'([*/+\-])([*/])', lambda m: m.group(1) if m.group(2) in '*/' else m.group(0), expression)
+    # # expression = re.sub(r'^[*/+\-]+', '', expression)
+    # expression = re.sub(r'[*/+\-]+$', '', expression)
 
     return expression, img_copy
 
@@ -184,7 +184,7 @@ elif mode == "✍️ Draw on Whiteboard":
                         if mini_label != predicted_label:
                             predicted_label = mini_label
 
-                    if confidence < 0.3 or (predicted_label in "*/" and prev_label in "+-*/"):
+                    if confidence < 0.3: # or (predicted_label in "*/" and prev_label in "+-*/"):
                         continue
 
                     expression += predicted_label
