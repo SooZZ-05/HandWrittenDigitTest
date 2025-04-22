@@ -211,4 +211,4 @@ elif mode == "✍️ Draw on Whiteboard":
                     except Exception as e:
                         st.error("❌ Failed to evaluate expression")
                 else:
-                    print("❌ Invalid expression")
+                    st.markdown("<h3>❌ Invalid expression</h3>", unsafe_allow_html=True)
