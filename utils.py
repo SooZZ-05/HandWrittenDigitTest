@@ -187,7 +187,7 @@ def load_mini_model():
     with open("models/MiniCNN_127.json", "r") as json_file:
         mini_model = model_from_json(json_file.read())
     mini_model.load_weights("models/MiniCNN_127.weights.h5")
-    mini_class_labels = ['1', '2', '7']
+    mini_class_labels = ['1', '2', '7', '9']
     return mini_model, mini_class_labels
 
 def check_expression(expression):
