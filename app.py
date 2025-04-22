@@ -17,12 +17,29 @@ def predict_expression_from_image(gray_img):
     # Define kernel size (tune this!)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     
-    # Apply morphological opening
-    opened = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    contours, _ = cv2.findContours(opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    bounding_boxes = [cv2.boundingRect(c) for c in contours]
+    final_contours = []
+    for cnt in contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+        aspect_ratio = w / float(h)
+    
+        if aspect_ratio > 1.8:  # Tune this threshold as needed
+            roi = binary[y:y+h, x:x+w]
+    
+            # Apply opening only to wide regions
+            opened_roi = cv2.morphologyEx(roi, cv2.MORPH_OPEN, kernel)
+    
+            # Find sub-contours
+            sub_contours, _ = cv2.findContours(opened_roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+            # Offset sub-contours
+            for sub in sub_contours:
+                sub += np.array([[x, y]])  # Translate to original image coords
+                final_contours.append(sub)
+        else:
+            final_contours.append(cnt)
+    bounding_boxes = [cv2.boundingRect(c) for c in final_contours]
     merged_once = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
     merged_boxes = merge_contours(merged_once, x_thresh=15, y_thresh=0)
     # merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
@@ -154,11 +171,29 @@ elif mode == "✍️ Draw on Whiteboard":
                 # Define kernel size (tune this!)
                 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
                 
-                # Apply morphological opening
-                opened = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-                contours, _ = cv2.findContours(opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                bounding_boxes = [cv2.boundingRect(c) for c in contours]
+                final_contours = []
+                for cnt in contours:
+                    x, y, w, h = cv2.boundingRect(cnt)
+                    aspect_ratio = w / float(h)
+                
+                    if aspect_ratio > 1.8:  # Tune this threshold as needed
+                        roi = binary[y:y+h, x:x+w]
+                
+                        # Apply opening only to wide regions
+                        opened_roi = cv2.morphologyEx(roi, cv2.MORPH_OPEN, kernel)
+                
+                        # Find sub-contours
+                        sub_contours, _ = cv2.findContours(opened_roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                
+                        # Offset sub-contours
+                        for sub in sub_contours:
+                            sub += np.array([[x, y]])  # Translate to original image coords
+                            final_contours.append(sub)
+                    else:
+                        final_contours.append(cnt)
+                bounding_boxes = [cv2.boundingRect(c) for c in final_contours]
                 merged_once = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
                 merged_boxes = merge_contours(merged_once, x_thresh=15, y_thresh=0)
                 # merged_boxes = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
