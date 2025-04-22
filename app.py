@@ -14,7 +14,13 @@ def predict_expression_from_image(gray_img):
     # Invert and binarize
     inverted = cv2.bitwise_not(gray_img)
     _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
-    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Define kernel size (tune this!)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    
+    # Apply morphological opening
+    opened = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+
+    contours, _ = cv2.findContours(opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     bounding_boxes = [cv2.boundingRect(c) for c in contours]
     merged_once = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
@@ -145,7 +151,13 @@ elif mode == "✍️ Draw on Whiteboard":
                 # Apply similar processing steps as the upload image prediction
                 inverted = cv2.bitwise_not(gray_img)
                 _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
-                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                # Define kernel size (tune this!)
+                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                
+                # Apply morphological opening
+                opened = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+
+                contours, _ = cv2.findContours(opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 bounding_boxes = [cv2.boundingRect(c) for c in contours]
                 merged_once = merge_contours(bounding_boxes, x_thresh=15, y_thresh=0)
                 merged_boxes = merge_contours(merged_once, x_thresh=15, y_thresh=0)
@@ -211,4 +223,8 @@ elif mode == "✍️ Draw on Whiteboard":
                     except Exception as e:
                         st.error("❌ Failed to evaluate expression")
                 else:
+                    st.markdown(
+                        f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
+                        unsafe_allow_html=True,
+                    )
                     st.markdown("<h3>❌ Invalid expression</h3>", unsafe_allow_html=True)
