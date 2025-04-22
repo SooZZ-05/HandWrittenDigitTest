@@ -24,7 +24,7 @@ def predict_expression_from_image(gray_img):
         x, y, w, h = cv2.boundingRect(cnt)
         aspect_ratio = w / float(h)
     
-        if aspect_ratio > 1.2 and aspect_ratio < 1.7:  # Tune this threshold as needed
+        if aspect_ratio > 1.6 and aspect_ratio < 1.7:  # Tune this threshold as needed
             roi = binary[y:y+h, x:x+w]
     
             # Apply opening only to wide regions
@@ -178,7 +178,7 @@ elif mode == "✍️ Draw on Whiteboard":
                     x, y, w, h = cv2.boundingRect(cnt)
                     aspect_ratio = w / float(h)
                 
-                    if aspect_ratio > 1.3 and aspect_ratio < 1.7:  # Tune this threshold as needed
+                    if aspect_ratio > 1.6 and aspect_ratio < 1.7:  # Tune this threshold as needed
                         roi = binary[y:y+h, x:x+w]
                 
                         # Apply opening only to wide regions
