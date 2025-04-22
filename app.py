@@ -7,7 +7,7 @@ from tensorflow.keras.models import model_from_json
 
 from utils import (
     merge_contours, preprocess_symbol, make_square, 
-    load_models, load_mini_model, merge_until_stable
+    load_models, load_mini_model, check_expression
 )
 
 def predict_expression_from_image(gray_img):
@@ -190,20 +190,25 @@ elif mode == "✍️ Draw on Whiteboard":
                     expression += predicted_label
                     prev_label = predicted_label
 
-                # Final cleanup
-                expression = re.sub(r'([*/+\-])([*/])', lambda m: m.group(1) if m.group(2) in '*/' else m.group(0), expression)
+                validExpression = check_expression(expression)
+                if validExpression:
+                    
+                # # Final cleanup
+                # expression = re.sub(r'([*/+\-])([*/])', lambda m: m.group(1) if m.group(2) in '*/' else m.group(0), expression)
                 # expression = re.sub(r'^[*/+\-]+', '', expression)
-                expression = re.sub(r'[*/+\-]+$', '', expression)
+                # expression = re.sub(r'[*/+\-]+$', '', expression)
 
-                st.markdown(
-                    f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
-                    unsafe_allow_html=True,
-                )
-                try:
-                    result = eval(expression)
                     st.markdown(
-                        f"<h2 style='font-size: 40px; color: green;'>✅ Result: <code>{expression} = {result}</code></h2>",
+                        f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
                         unsafe_allow_html=True,
                     )
-                except Exception as e:
-                    st.error("❌ Failed to evaluate expression")
+                    try:
+                        result = eval(expression)
+                        st.markdown(
+                            f"<h2 style='font-size: 40px; color: green;'>✅ Result: <code>{expression} = {result}</code></h2>",
+                            unsafe_allow_html=True,
+                        )
+                    except Exception as e:
+                        st.error("❌ Failed to evaluate expression")
+                else:
+                    print("❌ Invalid expression")
