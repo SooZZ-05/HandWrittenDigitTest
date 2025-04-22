@@ -15,7 +15,7 @@ def predict_expression_from_image(gray_img):
     inverted = cv2.bitwise_not(gray_img)
     _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
     # Define kernel size (tune this!)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (6, 6))
     
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -24,7 +24,7 @@ def predict_expression_from_image(gray_img):
         x, y, w, h = cv2.boundingRect(cnt)
         aspect_ratio = w / float(h)
     
-        if aspect_ratio > 1.8:  # Tune this threshold as needed
+        if aspect_ratio > 1.3:  # Tune this threshold as needed
             roi = binary[y:y+h, x:x+w]
     
             # Apply opening only to wide regions
@@ -169,7 +169,7 @@ elif mode == "✍️ Draw on Whiteboard":
                 inverted = cv2.bitwise_not(gray_img)
                 _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
                 # Define kernel size (tune this!)
-                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (6, 6))
                 
                 contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -178,7 +178,7 @@ elif mode == "✍️ Draw on Whiteboard":
                     x, y, w, h = cv2.boundingRect(cnt)
                     aspect_ratio = w / float(h)
                 
-                    if aspect_ratio > 1.8:  # Tune this threshold as needed
+                    if aspect_ratio > 1.3:  # Tune this threshold as needed
                         roi = binary[y:y+h, x:x+w]
                 
                         # Apply opening only to wide regions
