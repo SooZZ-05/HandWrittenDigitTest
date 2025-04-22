@@ -15,7 +15,7 @@ def predict_expression_from_image(gray_img):
     inverted = cv2.bitwise_not(gray_img)
     _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
     # Define kernel size (tune this!)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (4, 4))
     
     # Apply morphological opening
     opened = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
@@ -152,7 +152,7 @@ elif mode == "✍️ Draw on Whiteboard":
                 inverted = cv2.bitwise_not(gray_img)
                 _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
                 # Define kernel size (tune this!)
-                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (4, 4))
                 
                 # Apply morphological opening
                 opened = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
