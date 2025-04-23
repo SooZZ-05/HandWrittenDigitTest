@@ -127,38 +127,38 @@ def load_mini_model():
     mini_class_labels = ['1', '2', '7', '9']
     return mini_model, mini_class_labels
 
-# def check_expression(expression):
-#     validEquation = True
-#     # Pattern to match three consecutive operators
-#     threeConsecutive = r'([*/+\-])([*/+\-])([*/+\-])'
-#     invalidDuo = r'([*/+\-])([*/])'
-#     invalidStart = r'^([*/]|[+\-*/]{2})'
-#     invalidEnd = r'[*/+\-]$'
-#     # Search for the pattern in the expression
-#     if re.search(threeConsecutive, expression):
-#         validEquation = False
-#     if re.search(invalidDuo, expression):
-#         validEquation = False
-#     if re.search(invalidStart, expression):
-#         validEquation = False
-#     if re.search(invalidEnd, expression):
-#         validEquation = False
-#     return validEquation
+def check_expression(expression):
+    validEquation = True
+    # Pattern to match three consecutive operators
+    threeConsecutive = r'([*/+\-])([*/+\-])([*/+\-])'
+    invalidDuo = r'([*/+\-])([*/])'
+    invalidStart = r'^([*/]|[+\-*/]{2})'
+    invalidEnd = r'[*/+\-]$'
+    # Search for the pattern in the expression
+    if re.search(threeConsecutive, expression):
+        validEquation = False
+    if re.search(invalidDuo, expression):
+        validEquation = False
+    if re.search(invalidStart, expression):
+        validEquation = False
+    if re.search(invalidEnd, expression):
+        validEquation = False
+    return validEquation
 
-def check_expression(expr):
-    # Must not start or end with **, *, /, etc.
-    if re.match(r'^[*/]', expr) or re.match(r'[*/+\-]$', expr):
-        return False
-    # No invalid characters
-    if not re.match(r'^[0-9+\-*/^()]+$', expr):
-        return False
-    # Validate ** appears after digit and is followed by +/- or digit
-    tokens = re.split(r'(\*\*|[+\-*/()])', expr)
-    for i, t in enumerate(tokens):
-        if t == '**':
-            if i == 0 or not tokens[i - 1].isdigit():
-                return False
-            if i + 1 >= len(tokens) or not (tokens[i + 1].isdigit() or tokens[i + 1] in '+-'):
-                return False
-    return True
+# def check_expression(expr):
+#     # Must not start or end with **, *, /, etc.
+#     if re.match(r'^[*/]', expr) or re.match(r'[*/+\-]$', expr):
+#         return False
+#     # No invalid characters
+#     if not re.match(r'^[0-9+\-*/^()]+$', expr):
+#         return False
+#     # Validate ** appears after digit and is followed by +/- or digit
+#     tokens = re.split(r'(\*\*|[+\-*/()])', expr)
+#     for i, t in enumerate(tokens):
+#         if t == '**':
+#             if i == 0 or not tokens[i - 1].isdigit():
+#                 return False
+#             if i + 1 >= len(tokens) or not (tokens[i + 1].isdigit() or tokens[i + 1] in '+-'):
+#                 return False
+#     return True
 
