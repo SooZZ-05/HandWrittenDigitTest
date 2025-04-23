@@ -54,7 +54,7 @@ def predict_expression_from_image(gray_img):
 
     expression = ""
     prev_label = ""
-    midline = np.mean([y + h // 2 for x, y, w, h in sorted_boxes])
+    # midline = np.mean([y + h // 2 for x, y, w, h in sorted_boxes])
 
     for x, y, w, h in sorted_boxes:
         if w < 2 or h < 2 or w * h < 10:
@@ -78,20 +78,20 @@ def predict_expression_from_image(gray_img):
             if mini_label != predicted_label:
                 predicted_label = mini_label
 
-        # if confidence < 0.3:# or (predicted_label in "*/" and prev_label in "+-*/"):
-        #     continue
-
-        if confidence < 0.3 or (predicted_label in "*/" and prev_label in "+-*/" and not (prev_label == "*" and predicted_label == "*")):
+        if confidence < 0.3:# or (predicted_label in "*/" and prev_label in "+-*/"):
             continue
 
-        if y + h < midline:
-            if prev_label.isdigit():  # Can only follow a digit
-                expression += "**" + predicted_label
-            else:
-                expression += predicted_label  # Not valid position for power, just append
-        else:
-            expression += predicted_label
-        # expression += predicted_label
+        # if confidence < 0.3 or (predicted_label in "*/" and prev_label in "+-*/" and not (prev_label == "*" and predicted_label == "*")):
+        #     continue
+
+        # if y + h < midline:
+        #     if prev_label.isdigit():  # Can only follow a digit
+        #         expression += "**" + predicted_label
+        #     else:
+        #         expression += predicted_label  # Not valid position for power, just append
+        # else:
+        #     expression += predicted_label
+        expression += predicted_label
         prev_label = predicted_label
 
     # # Final cleanup
