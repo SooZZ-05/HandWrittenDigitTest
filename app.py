@@ -11,12 +11,12 @@ from utils import (
 )
 
 def predict_expression_from_image(gray_img):
-    blurred = cv2.GaussianBlur(gray_img, (3, 3), 0)
+    blurred = cv2.GaussianBlur(gray_img, (5, 5), 0)
     # Invert and binarize
     inverted = cv2.bitwise_not(blurred)
     _, binary = cv2.threshold(inverted, 127, 255, cv2.THRESH_BINARY)
     # Define kernel size (tune this!)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
     binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
