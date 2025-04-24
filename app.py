@@ -132,7 +132,7 @@ if mode == "📤 Upload Image":
         # Predict using shared function
         expression, annotated_img = predict_expression_from_image(img)
 
-        st.image(annotated_img, caption="Detected Boxes", use_container_width=True)
+        st.image(cv2.bitwise_not(annotated_img), caption="Detected Boxes", use_container_width=True)
 
         st.markdown(
             f"<h2 style='font-size: 40px;'>✍️ Recognized Expression: <code>{expression}</code></h2>",
