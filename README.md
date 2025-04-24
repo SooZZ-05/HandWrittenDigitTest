@@ -17,3 +17,5 @@ This Streamlit app allows users to upload images or draw a handwritten mathemati
 - NumPy
 - Matplotlib
 - Streamlit
+- Pillow
+- Streamlit Canvas
