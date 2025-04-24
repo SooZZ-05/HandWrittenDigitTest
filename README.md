@@ -1,10 +1,10 @@
 # 🧠 Handwritten Equation Recognition App
 
-This Streamlit app allows users to upload images of handwritten mathematical equations. The app uses a CNN-based symbol recognition system to detect individual characters and evaluate the final expression.
+This Streamlit app allows users to upload images or draw a handwritten mathematical equations. The app uses a CNN-based symbol recognition system to detect individual characters and evaluate the final expression.
 
 ## 🚀 Features
 
-- Upload handwritten equation images
+- Upload images or draw your handwritten equation
 - Detect and visualize individual characters
 - Predict symbols using pre-trained CNN models
 - Display recognized expression and evaluate the result
