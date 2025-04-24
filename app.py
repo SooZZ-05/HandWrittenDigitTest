@@ -10,7 +10,17 @@ from utils import (
     load_models, load_mini_model, check_expression
 )
 
+def preprocess_image_for_text(gray_img):
+    avg_color = np.mean(gray_img)
+    
+    # If the average color is closer to white (255), we assume white background and black text
+    if avg_color > 127:
+        gray_img = cv2.bitwise_not(gray_img)
+    
+    return gray_img
+
 def predict_expression_from_image(gray_img):
+    gray_img = preprocess_image_for_text(gray_img)
     blurred = cv2.GaussianBlur(gray_img, (5, 5), 0)
     # Invert and binarize
     inverted = cv2.bitwise_not(blurred)
